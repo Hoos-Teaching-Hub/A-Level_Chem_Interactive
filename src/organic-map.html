@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organic Chemistry Reaction Map 3D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three-spritetext@1.8.1/dist/three-spritetext.min.js"></script>
+    <script src="https://unpkg.com/3d-force-graph@1.73.1/dist/3d-force-graph.min.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <!-- Main Network Container -->
+    <div id="mynetwork"></div>
+
+    <!-- Info/Control Panel -->
+    <div class="fixed top-4 right-4 w-full max-w-sm sm:w-96 glass-panel rounded-xl p-6 transition-all duration-300 transform z-10"
+        id="infoPanel">
+        <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+            <h2 class="text-2xl font-bold text-white">Reaction Lab 3D</h2>
+            <div class="flex gap-2">
+                <button onclick="resetCamera()"
+                    class="p-2 bg-gray-700 rounded-full hover:bg-gray-600 chem-btn text-white" title="Reset Camera">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="contentArea">
+            <p class="text-gray-300 mb-4">Left-click and drag to rotate. Right-click to pan. Scroll to zoom.</p>
+            <p class="text-gray-400 text-sm mb-4">Click a <span class="font-bold text-blue-400">Sphere</span> for
+                compound info or a <span class="font-bold text-purple-400">Link Arrow</span> for reaction details.</p>
+        </div>
+
+        <!-- Dynamic Content Template (Hidden by default) -->
+        <div id="dynamicContent" class="hidden">
+            <h3 id="detailTitle" class="text-xl font-bold text-white mb-1"></h3>
+            <span id="detailType" class="inline-block px-2 py-1 text-xs font-semibold rounded mb-3"></span>
+
+            <div id="reactionDetails" class="hidden space-y-3">
+                <div class="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">Reagents & Conditions</span>
+                    <p id="reagents" class="text-blue-200 font-medium mt-1"></p>
+                </div>
+                <div class="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">Reaction Type</span>
+                    <p id="mechanism" class="text-purple-200 font-medium mt-1"></p>
+                </div>
+                <button id="animateBtn"
+                    class="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded chem-btn flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Simulate Reaction
+                </button>
+            </div>
+
+            <div id="compoundDetails" class="hidden">
+                <p id="compoundDesc" class="text-gray-300 leading-relaxed"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend (Bottom Left) -->
+    <div
+        class="fixed bottom-4 left-4 bg-gray-900/90 backdrop-blur border border-gray-700 rounded-lg p-3 shadow-lg text-xs hidden md:block z-0 text-white">
+        <h4 class="font-bold mb-2 text-gray-400">Legend</h4>
+        <div class="grid grid-cols-2 gap-3">
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full mr-2" style="background:#888"></span>Crude
+                Oil</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full mr-2"
+                    style="background:#ff99ff"></span>Hydrocarbons</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full mr-2"
+                    style="background:#ffff99"></span>Halogenoalkanes</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full mr-2"
+                    style="background:#3b82f6"></span>Alcohols</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full mr-2"
+                    style="background:#ff9966"></span>Carbonyls</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full mr-2"
+                    style="background:#ff6666"></span>Acids/Esters</div>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
