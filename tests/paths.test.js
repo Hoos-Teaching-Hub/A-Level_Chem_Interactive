@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { gData } = require('../data');
+const { gData } = require('../src/js/data');
 
 const expectedPaths = [
     ['AlcoholGroup', 'Alc1', 'Class', 'structure'],
