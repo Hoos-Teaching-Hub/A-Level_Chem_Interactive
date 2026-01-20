@@ -4,21 +4,14 @@
 
 **Goal:** confirm the official CIE 9701 syllabus sections and map each to product features.
 
-**Status:** external HTTP requests are still blocked in this environment (403 CONNECT tunnel failures), so the official syllabus PDF/page could not be fetched here.
+**Status:** confirmed against the official Cambridge International AS & A Level Chemistry (9701) syllabus PDF for 2025–2027.
 
-**Verification attempts (commands):**
+**Verification sources (commands):**
 - `curl -L -I -A "Mozilla/5.0" https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-international-as-and-a-level-chemistry-9701/`
-- `curl -L -I "https://papers.gceguide.com/A%20Levels/Chemistry%20(9701)/Syllabus/"`
-- `curl -I https://example.com`
+- `curl -L -A "Mozilla/5.0" -o docs/syllabus/9701-2025-2027-syllabus.pdf https://www.cambridgeinternational.org/Images/664563-2025-2027-syllabus.pdf`
 
-**Next step to fix the syllabus issue (two options):**
-1. **Provide the syllabus PDF in-repo** (recommended): drop the official CIE 9701 syllabus PDF under `docs/syllabus/` so it can be referenced and parsed locally without outbound network access.
-2. **Enable outbound access**: once available, update this section with the official link(s) and exact syllabus version/year.
-
-**Local import checklist (when PDF is available):**
-- Add the PDF to `docs/syllabus/` and include the filename + version here.
-- Extract and list the official section headings as the canonical syllabus index.
-- Replace the “Unverified mapping” note in Section 2 with confirmed section names.
+**Local reference:**
+- `docs/syllabus/9701-2025-2027-syllabus.pdf` (Version 1, published September 2022; use for exams in 2025–2027).
 
 ---
 
@@ -61,49 +54,52 @@
 
 ## 2) A-Level 9701 Knowledge Areas → Feature Mapping
 
-> **Note:** This mapping uses the standard CIE 9701 syllabus structure (AS + A2). Confirm exact section names/ordering against the official PDF when external access is available.
+> **Confirmed:** Section names and numbering below match the official 2025–2027 syllabus content overview (AS topics 1–22, A Level topics 23–37).
 
-### A) Physical Chemistry
-| Syllabus Area | Knowledge Points (examples) | Best Feature Mapping |
+### A) AS Level subject content (sections 1–22)
+| Section | Official syllabus topic | Best feature mapping |
 |---|---|---|
-| Atoms, moles, equations | moles, formulae, empirical/molecular | **Micro panel + Quiz Mode** (calculation prompts, formula recall) |
-| Atomic structure | subatomic particles, isotopes, electronic configuration | **Micro panel + animated electron configuration** |
-| Chemical bonding | ionic/covalent/metallic, shapes, polarity | **Micro panel + 3D model viewer** |
-| States of matter | intermolecular forces, ideal gas | **Interactive sliders** (temperature/pressure effects) |
-| Enthalpy changes | Hess cycles, bond energies | **Energy profile dynamic chart** |
-| Reaction kinetics | rate graphs, activation energy | **Dynamic chart + particle collision sim** |
-| Equilibria | Kc, Le Chatelier | **Interactive equilibrium slider + quiz** |
-| Redox | oxidation numbers, redox titrations | **Side panel + redox step visualization** |
-| Acid-base | pH, buffers, Ka/Kb | **Interactive titration curve + calculator** |
+| 1 | Atomic structure | **Micro panel + animated electron configuration** |
+| 2 | Atoms, molecules and stoichiometry | **Micro panel + Quiz Mode** (calculation prompts, formula recall) |
+| 3 | Chemical bonding | **Micro panel + 3D model viewer** |
+| 4 | States of matter | **Interactive sliders** (temperature/pressure effects) |
+| 5 | Chemical energetics | **Energy profile dynamic chart** |
+| 6 | Electrochemistry | **Redox step visualization + interactive cell diagram** |
+| 7 | Equilibria | **Interactive equilibrium slider + quiz** |
+| 8 | Reaction kinetics | **Dynamic chart + particle collision sim** |
+| 9 | The Periodic Table: chemical periodicity | **Trend charts + compare tooltips** |
+| 10 | Group 2 | **Exam tips + reaction map** |
+| 11 | Group 17 | **Quiz + test reaction mapping** |
+| 12 | Nitrogen and sulfur | **Industrial process diagrams + mechanism steps** |
+| 13 | An introduction to AS Level organic chemistry | **Macro graph + 3D stereochemistry** |
+| 14 | Hydrocarbons | **Macro map + mechanism animation** |
+| 15 | Halogen compounds | **Curly arrow SVG animation + quiz** |
+| 16 | Hydroxy compounds | **Reaction map + exam tips + masking** |
+| 17 | Carbonyl compounds | **Test reaction cards + quiz** |
+| 18 | Carboxylic acids and derivatives | **Map + animated mechanism** |
+| 19 | Nitrogen compounds | **Mechanism sequences + flashcards** |
+| 20 | Polymerisation | **Comparison panel + filtering** |
+| 21 | Organic synthesis | **Synthesis challenge + reagent recall** |
+| 22 | Analytical techniques | **Spectral panels + interactive overlays** |
 
-### B) Inorganic Chemistry
-| Syllabus Area | Knowledge Points (examples) | Best Feature Mapping |
+### B) A Level subject content (sections 23–37)
+| Section | Official syllabus topic | Best feature mapping |
 |---|---|---|
-| Periodicity | trends, ionization energies | **Micro panel + trend charts** |
-| Group 2 | reactivity, thermal stability | **Exam tips + reaction map** |
-| Group 17 | displacement, halide tests | **Quiz + test reaction mapping** |
-| Nitrogen & sulfur (and/or group trends) | ammonia, NOx, sulfuric acid | **Mechanism steps + industrial process diagrams** |
-| Transition elements | complex ions, ligand exchange, redox | **3D coordination models + quiz** |
-
-### C) Organic Chemistry
-| Syllabus Area | Knowledge Points (examples) | Best Feature Mapping |
-|---|---|---|
-| Intro to organic | functional groups, isomerism | **Macro graph + 3D stereochemistry** |
-| Hydrocarbons | alkanes/alkenes/aromatics | **Macro map + mechanism animation** |
-| Halogenoalkanes | nucleophilic substitution | **Curly arrow SVG animation + quiz** |
-| Alcohols | oxidation, dehydration | **Map + exam tips + reaction masking** |
-| Carbonyls | aldehydes/ketones tests | **Test reaction cards + quiz** |
-| Carboxylic acids & derivatives | esterification, hydrolysis | **Map + animated mechanism** |
-| Nitrogen compounds | amines, amides, diazotisation | **Mechanism sequences** |
-| Polymers | addition vs condensation | **Comparison panel + filtering** |
-
-### D) Analysis & Practical Skills
-| Syllabus Area | Knowledge Points (examples) | Best Feature Mapping |
-|---|---|---|
-| IR spectroscopy | functional group peaks | **Side panel spectral plot + quiz** |
-| NMR spectroscopy | chemical shifts, splitting | **Interactive spectral overlay** |
-| Mass spectrometry | molecular ion, fragments | **Animated fragmentation** |
-| Qualitative analysis | test results + observations | **Exam tips + flashcards** |
+| 23 | Chemical energetics | **Energy profile dynamic chart + advanced Hess cycles** |
+| 24 | Electrochemistry | **Cell potential calculator + redox visualization** |
+| 25 | Equilibria | **Le Chatelier sandbox + buffer/calculation drills** |
+| 26 | Reaction kinetics | **Arrhenius plots + mechanism step animation** |
+| 27 | Group 2 | **Comparative reactivity map + exam tips** |
+| 28 | Chemistry of transition elements | **3D coordination models + ligand exchange sim** |
+| 29 | An introduction to A Level organic chemistry | **Mechanism gallery + stereochemistry tools** |
+| 30 | Hydrocarbons | **Multi-step mechanism animations + practice prompts** |
+| 31 | Halogen compounds | **SN1/SN2/E1/E2 animation + quiz** |
+| 32 | Hydroxy compounds | **Oxidation pathway map + reaction masking** |
+| 33 | Carboxylic acids and derivatives | **Acylation pathway explorer + exam tips** |
+| 34 | Nitrogen compounds | **Diazotisation sequence + recall mode** |
+| 35 | Polymerisation | **Condensation vs addition comparison + filters** |
+| 36 | Organic synthesis | **Route planning challenges + solution feedback** |
+| 37 | Analytical techniques | **IR/NMR/MS overlays + qualitative analysis flashcards** |
 
 ---
 
