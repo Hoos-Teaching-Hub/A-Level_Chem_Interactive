@@ -17,6 +17,13 @@
 
 ## 1) Milestones (high-level product phases)
 
+### M0 — Infrastructure (Auth, Data, Roles)
+**Goal:** secure foundation for student progress tracking and teacher insights.
+- Student auth/account system (register/login/reset), session refresh + logout.
+- Progress storage with row-level permissions (students can only read/write their own).
+- Minimal teacher view with aggregated stats (coverage + weak topics).
+- Role gating (students cannot access teacher-only views).
+
 ### M1 — Core Learning Surface
 **Goal:** a usable learning map where each reaction/compound has structured knowledge, not just labels.
 - Structured reaction/compound metadata (conditions, mechanism summary, exam tips).
@@ -49,6 +56,29 @@
 **Goal:** export/printable revision support.
 - Cheatsheet / PDF export.
 - Summary tables and checklists.
+
+---
+
+## 1.1) Milestone integration checklist (detailed scope + QA)
+
+| Milestone | Feature area | Scope | Success criteria | Dependency | QA check |
+|---|---|---|---|---|---|
+| M0 | Student account & progress | Auth system (register/login/reset), “My Progress” page, session refresh | Students can register/login/logout; “My Progress” loads | Backend choice (Supabase/Firebase) | New user can register/login/logout; refresh keeps session |
+| M0 | Database & permissions | Progress tables + row-level permissions | Each student’s nodes/reactions/quizzes persist | Backend choice (Supabase/Firebase) | Permission test: A cannot read/write B |
+| M0 | Teacher view (minimum) | Class stats (coverage + top weak points) | Teacher sees aggregated data without personal details | Backend choice (Supabase/Firebase) | Role gating: students cannot open teacher page |
+| M1 | Data modeling | Nodes/Links extended: `level`, `topic`, `examTips`, `quizData`, `animationId` | Data structure stable & extensible | None | Schema check: required fields; no orphan nodes |
+| M1 | Sidebar information architecture | Fixed What/How/Why/Exam Tip blocks | Node/edge click surfaces scan-friendly info | Data fields in place | Missing content falls back gracefully |
+| M5 | A2 expansion — Aromatics | Benzene → derivatives + EAS chain | Aromatics backbone in map; A2 filter works | M1 data structure | Coverage check: A2 nodes have `topic`/`level` |
+| M5 | A2 expansion — Nitrogen | Acyl chloride/amide/amino acid + diazotisation | A2 nitrogen routes connect cleanly | M1 data structure | Links correct; key conditions present |
+| M5 | A2 expansion — Polymers | Condensation (polyester/polyamide) + UI distinction vs addition | UI clearly separates polymer types | M1 data structure | Filter works; tags consistent |
+| M2 | Code-based animation | Curly arrows mechanism sample | Reusable animation player + registry | M1 `animationId` | Fallback if animation missing |
+| M2 | Aromatics delocalisation | Big-π bond demo (Three.js) | Toggle/rotate/explain stability | Animation framework | Performance check on low-end devices |
+| M3 | Quiz mode skeleton | Global toggle masks reagents/labels/conditions | Clicking link prompts question before reveal | M1 `quizData` | Missing quiz data skips quiz flow |
+| M3 | Quiz types | Reagent recall + predict product + mechanism ordering | At least two types run end-to-end | Quiz skeleton | Scoring correct; attempt recorded |
+| M4 | Path challenge | Start/end selection + student route build | Wrong step feedback + reward animation | Graph pathing | BFS/shortest path correct; no loops |
+| M4 | Difficulty tiers | Topic/level/step auto-tiering | Easy/medium/hard generation | Path challenge | Reproducible; hints sensible |
+| M6 | Cheatsheet/PDF | Auto-generate reaction list + common mistakes | One-click printable page/PDF | Data fields complete | Export complete; pagination ok; missing flagged |
+| M6 | Past-paper linking | Link reactions/nodes to past paper tags | Sidebar shows prior exam references | Curated index | Links valid; year/question consistent |
 
 ---
 
