@@ -1,0 +1,2 @@
+-- Seed data intentionally left blank.
+-- Use supabase/seed/seed-demo.mjs to generate local demo data when needed.
