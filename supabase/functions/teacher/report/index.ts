@@ -7,6 +7,7 @@ import {
   jsonResponse,
   notFound,
 } from '../../_shared/errors.ts';
+import { hashCode } from '../../_shared/hash.ts';
 import {
   handlePreflight,
   validateQuery,
@@ -16,6 +17,7 @@ import {
 const ReportQuerySchema = z
   .object({
     class_code: z.string().min(2),
+    teacher_code: z.string().min(2).optional(),
     teacher_code_hash: z.string().min(10).optional(),
   })
   .strict();
@@ -44,12 +46,19 @@ serve(async (request) => {
   }
 
   const { class_code } = parsedQuery.data;
+  const teacherCodeFromQuery = parsedQuery.data.teacher_code;
   const teacherCodeHashFromQuery = parsedQuery.data.teacher_code_hash;
+  const teacherCodeHeader = request.headers.get('x-teacher-code');
   const teacherCodeHashHeader = request.headers.get('x-teacher-code-hash');
+  const teacher_code = teacherCodeFromQuery ?? teacherCodeHeader;
   const teacher_code_hash = teacherCodeHashFromQuery ?? teacherCodeHashHeader;
 
-  if (!teacher_code_hash) {
-    return badRequest('Missing teacher code hash.');
+  const resolvedTeacherHash = teacher_code
+    ? await hashCode(teacher_code, class_code)
+    : teacher_code_hash;
+
+  if (!resolvedTeacherHash) {
+    return badRequest('Missing teacher code.');
   }
 
   const { data: classRow, error: classError } = await supabase
@@ -66,7 +75,7 @@ serve(async (request) => {
     return notFound('Class code not found.');
   }
 
-  if (classRow.teacher_code_hash !== teacher_code_hash) {
+  if (classRow.teacher_code_hash !== resolvedTeacherHash) {
     return forbidden('Invalid teacher code.');
   }
 
