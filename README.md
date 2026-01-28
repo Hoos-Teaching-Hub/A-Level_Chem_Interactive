@@ -55,6 +55,25 @@ Set the API base URL for the frontend fetch helpers:
 VITE_API_BASE_URL="https://api.example.com"
 ```
 
+## Database initialization (Supabase)
+
+Follow the M0 roadmap task (T2) by applying the migrations under `supabase/migrations/`.
+
+```sh
+supabase db reset
+```
+
+Then generate demo seed data (hash-only codes in the database, plaintext stored locally):
+
+```sh
+SERVER_SALT="change-me" node supabase/seed/seed-demo.mjs
+psql "$SUPABASE_DB_URL" -f supabase/seed/seed-demo.sql
+```
+
+The plaintext demo class/teacher/student codes are written to `supabase/seed/demo-codes.txt`
+and should stay local (not committed). The database only receives SHA-256 hashes derived from
+`<code>:<class_code>:<server_salt>`.
+
 ## Where to add new M0 work
 
 - **Frontend flows (T1):** `src/pages/`, `src/components/`, `src/app/`.

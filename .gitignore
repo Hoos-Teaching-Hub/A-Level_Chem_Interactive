@@ -4,3 +4,4 @@ dist/
 dist-ssr/
 .env 
 .env.* 
+supabase/seed/demo-codes.txt
