@@ -13,6 +13,8 @@ const classCode = process.env.DEMO_CLASS_CODE ?? `demo-${randomBytes(3).toString
 const className = process.env.DEMO_CLASS_NAME ?? 'Demo Class';
 const teacherCode = process.env.DEMO_TEACHER_CODE ?? `teacher-${randomBytes(4).toString('hex')}`;
 
+const sqlEscape = (value) => value.replace(/'/g, "''");
+
 const hashCode = (code) =>
   createHash('sha256')
     .update(`${code}:${classCode}:${serverSalt}`)
@@ -28,7 +30,7 @@ const studentRows = studentCodes
   .map((studentCode, index) => {
     const displayName = `Student ${index + 1}`;
     const studentHash = hashCode(studentCode);
-    return `  (gen_random_uuid(), '${classCode}', '${studentHash}', '${displayName}')`;
+    return `  (gen_random_uuid(), '${sqlEscape(classCode)}', '${studentHash}', '${sqlEscape(displayName)}')`;
   })
   .join(',\n');
 
@@ -37,7 +39,7 @@ const sql = `-- Auto-generated demo seed.\n` +
   `-- Teacher code: ${teacherCode}\n` +
   `-- Student codes written to demo-codes.txt\n\n` +
   `insert into classes (class_code, name, teacher_code_hash)\n` +
-  `values ('${classCode}', '${className}', '${teacherHash}')\n` +
+  `values ('${sqlEscape(classCode)}', '${sqlEscape(className)}', '${teacherHash}')\n` +
   `on conflict (class_code) do update\n` +
   `  set name = excluded.name,\n` +
   `      teacher_code_hash = excluded.teacher_code_hash;\n\n` +
