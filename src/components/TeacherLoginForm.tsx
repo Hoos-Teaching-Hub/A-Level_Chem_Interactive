@@ -30,7 +30,12 @@ export function TeacherLoginForm() {
     }
 
     console.log('teacher.login', parsed.data);
-    await apiClient.teacherLogin(parsed.data);
+    try {
+      await apiClient.teacherLogin(parsed.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to sign in right now.';
+      setError(message);
+    }
   };
 
   return (
