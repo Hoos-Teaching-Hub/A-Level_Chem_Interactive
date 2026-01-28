@@ -17,9 +17,9 @@
 
 ## 1) Milestones (high-level product phases)
 
-### M0 — Infrastructure (Auth, Data, Roles)
-**Goal:** secure foundation for student progress tracking and teacher insights.
-- Student auth/account system (register/login/reset), session refresh + logout.
+### M0 — Infrastructure (Code-based Access, Data, Roles)
+**Goal:** secure foundation for student progress tracking and teacher insights without email/third-party login.
+- Code-based access flow (class code + student code + display name) with server-side hashing.
 - Progress storage with row-level permissions (students can only read/write their own).
 - Minimal teacher view with aggregated stats (coverage + weak topics).
 - Role gating (students cannot access teacher-only views).
@@ -203,3 +203,44 @@ Pick the next focus:
 - **Option A:** M1 — complete structured metadata + Exam Tips.
 - **Option B:** M2 — first mechanism animation demo.
 - **Option C:** M3 — Quiz Mode skeleton.
+
+---
+
+## 8) Code-based access & progress sync plan (detailed task list)
+
+**Purpose:** align the upcoming implementation plan with the roadmap while keeping students anonymous (no email/SSO).
+
+### 8.0 Recommended stack profile (minimal vs. scalable)
+**Goal:** keep M0 delivery fast while providing a clear path to scale.
+
+| Layer | Minimal (ship fast) | Scalable (upgrade path) | Rationale |
+|---|---|---|---|
+| State for progress/sync | LocalStorage + TanStack Query | Add Zustand for sync/status UI | Minimal is enough for MVP; Zustand makes sync status simpler as features grow. |
+| Offline storage | LocalStorage only | Add IndexedDB (`idb-keyval`) | IndexedDB protects against localStorage size limits when activity state expands. |
+| Forms | Controlled inputs | React Hook Form + Zod resolver | Adds validation + error UX without much overhead. |
+| API client | Fetch wrapper (timeout/retry) | Shared request/response helpers + typed errors | Keeps edge-function errors consistent across UI. |
+| Edge Functions | Shared utils (hashing/validation/errors) | Add rate-limit table + structured logging | Start minimal, then add durability & ops visibility. |
+
+### 8.1 Task breakdown mapped to M0
+| Task | Scope | Output artifacts | Dependencies | Definition of done |
+|---|---|---|---|---|
+| **T1. Frontend skeleton** | Vite + React + TS + Router + Query + Zod + Tailwind; `/student` + `/teacher` routes; join/login forms; API client placeholder | `src/` routes, base UI components, `api.ts`, README update | None | `npm run dev` works; form submissions log payloads |
+| **T2. DB schema + migrations** | Tables: `classes`, `students`, `sessions`, `progress`, plus teacher auth (hash) | `supabase/migrations/*`, seed script, README update | Supabase CLI | Migrations apply cleanly locally |
+| **T3. Edge Functions** | `join`, `load`, `save`, `teacher/report` with Zod validation, hashing, and basic rate limit | `supabase/functions/*`, Deno tests, README update | T2 | Functions run locally; curl examples return expected data |
+| **T4. Offline-first sync** | Local-first save, background sync, conflict resolution by `updated_at`, teacher code in sessionStorage | `src/api.ts`, storage utils, Query cache | T1 + T3 | Offline progress preserved; sync succeeds when online |
+| **T5. Student MVP** | Activity list + activity page; status bar; sync states | `src/student/*`, mock activities | T4 | Cross-device join sees same progress |
+| **T6. Teacher dashboard** | Stats, leaderboard, activity distribution, CSV export, search | `src/teacher/*` | T3 | Data renders and exports |
+| **T7. Deployment guide** | Env vars, Supabase CLI commands, pre-launch checklist | README update | T2 + T3 | New dev can deploy in ~30 minutes |
+
+### 8.2 Reasonableness assessment (per task)
+1. **T1 — Frontend skeleton:** Highly reasonable. The stack is standard and low-risk; it unblocks parallel backend work. Risk is minimal and mostly about consistent project structure.
+2. **T2 — DB schema + migrations:** Reasonable and necessary. Hash-only storage for student codes and sessions is appropriate. Risk: future schema changes if activity model evolves; mitigate with clear migration strategy.
+3. **T3 — Edge Functions:** Reasonable and secure. Service-role-only access is correct for write paths. Main risk is rate limiting and token expiry; implement minimum viable throttling and keep responses consistent for the UI.
+4. **T4 — Offline-first sync:** Reasonable but medium complexity. Risks include conflict resolution edge cases and perceived delays; mitigate with a simple `updated_at` winner rule plus clear UI status.
+5. **T5 — Student MVP:** Reasonable. Using mock activities keeps scope contained and validates end-to-end sync quickly.
+6. **T6 — Teacher dashboard:** Reasonable. The report endpoint should aggregate in SQL for performance; avoid heavy client-side aggregation for large classes.
+7. **T7 — Deployment guide:** Reasonable and often overlooked. Clear env var documentation prevents configuration errors, especially around salts and teacher codes.
+
+### 8.3 Alignment to roadmap milestones
+- **M0:** Covered by T1–T4 plus the minimal teacher report (T6).
+- **M1–M6:** After M0 is stable, proceed with the knowledge graph, quizzes, and animations as already defined above.
