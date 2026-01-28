@@ -31,7 +31,12 @@ export function JoinForm() {
     }
 
     console.log('student.join', parsed.data);
-    await apiClient.join(parsed.data);
+    try {
+      await apiClient.join(parsed.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to join right now.';
+      setError(message);
+    }
   };
 
   return (

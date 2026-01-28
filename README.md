@@ -47,6 +47,14 @@ Then open:
 Legacy organic map assets remain available at `/legacy/` (for example,
 `http://localhost:5173/legacy/organic-map.html`).
 
+## Environment configuration
+
+Set the API base URL for the frontend fetch helpers:
+
+```sh
+VITE_API_BASE_URL="https://api.example.com"
+```
+
 ## Where to add new M0 work
 
 - **Frontend flows (T1):** `src/pages/`, `src/components/`, `src/app/`.
