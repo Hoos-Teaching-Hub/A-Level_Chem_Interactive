@@ -18,3 +18,9 @@ jobs:
 
       - name: Run reaction path tests
         run: node tests/paths.test.js
+
+      - name: Run structure tests
+        run: node tests/structure.test.js
+
+      - name: Run database schema tests
+        run: node tests/db.test.js
