@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:edge": "bash scripts/test-edge.sh"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.3",
