@@ -31,16 +31,18 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: 2.1.4
+
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: 'latest'
+          version: "latest"
 
-      - name: Init local Supabase stack
-        run: supabase init
-
-      - name: Start local Supabase stack
-        run: supabase db start
+      - name: Start local Supabase stack (full)
+        run: supabase start
 
       - name: Reset database (migrations + seed)
         run: supabase db reset
@@ -58,3 +60,6 @@ jobs:
           else
             echo "No supabase/tests directory found; skipping pgTAP tests."
           fi
+
+      - name: Run Edge Functions tests
+        run: bash scripts/test-edge.sh
