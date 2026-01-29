@@ -33,6 +33,16 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   },
 });
 
+async function readJson(resp: Response) {
+  const raw = await resp.text();
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function assertStatusAndDrain(resp: Response, expected: number) {
+  await resp.text();
+  assertEquals(resp.status, expected);
+}
+
 async function createClass(classCode: string): Promise<void> {
   const { error } = await supabase.from('classes').insert({
     class_code: classCode,
@@ -181,6 +191,118 @@ Deno.test('POST /save updates progress and updated_at', async () => {
     assertEquals(progressRows.activity_id, activityId);
     assertEquals(progressRows.state, { progress: 0.7 });
     assertEquals(new Date(progressRows.updated_at).getTime(), new Date(savePayload.updated_at).getTime());
+  } finally {
+    await cleanupTestData({ classCode, studentId, rateLimitIp });
+  }
+});
+
+Deno.test('GET /load returns progress with optional since filter', async () => {
+  const classCode = `class_${crypto.randomUUID().slice(0, 8)}`;
+  const studentCode = `student_${crypto.randomUUID().slice(0, 8)}`;
+  const displayName = 'Edge Loader';
+  const rateLimitIp = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+  const firstActivityId = `activity_${crypto.randomUUID().slice(0, 8)}`;
+  const secondActivityId = `activity_${crypto.randomUUID().slice(0, 8)}`;
+  let studentId: string | undefined;
+
+  try {
+    await createClass(classCode);
+
+    const joinPayload = await joinSession({
+      classCode,
+      studentCode,
+      displayName,
+      rateLimitIp,
+    });
+
+    studentId = joinPayload.student_profile.id;
+
+    const firstSaveResponse = await fetch(`${functionsBaseUrl}/save`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${joinPayload.session_token}`,
+      },
+      body: JSON.stringify({
+        updates: [
+          {
+            activity_id: firstActivityId,
+            state: { progress: 0.1 },
+          },
+        ],
+      }),
+    });
+
+    assertEquals(firstSaveResponse.status, 200);
+    const firstSavePayload = await firstSaveResponse.json();
+    assertExists(firstSavePayload.updated_at);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const secondSaveResponse = await fetch(`${functionsBaseUrl}/save`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${joinPayload.session_token}`,
+      },
+      body: JSON.stringify({
+        updates: [
+          {
+            activity_id: secondActivityId,
+            state: { progress: 0.9 },
+          },
+        ],
+      }),
+    });
+
+    assertEquals(secondSaveResponse.status, 200);
+    const secondSavePayload = await secondSaveResponse.json();
+    assertExists(secondSavePayload.updated_at);
+
+    const loadResponse = await fetch(`${functionsBaseUrl}/load`, {
+      method: 'GET',
+      headers: {
+        authorization: `Bearer ${joinPayload.session_token}`,
+      },
+    });
+
+    assertEquals(loadResponse.status, 200);
+    const loadPayload = await readJson(loadResponse);
+
+    const activityIds = loadPayload?.progress.map((item: { activity_id: string }) =>
+      item.activity_id
+    );
+    assertEquals(new Set(activityIds), new Set([firstActivityId, secondActivityId]));
+
+    const sinceResponse = await fetch(
+      `${functionsBaseUrl}/load?since=${encodeURIComponent(firstSavePayload.updated_at)}`,
+      {
+        method: 'GET',
+        headers: {
+          authorization: `Bearer ${joinPayload.session_token}`,
+        },
+      },
+    );
+
+    assertEquals(sinceResponse.status, 200);
+    const sincePayload = await readJson(sinceResponse);
+    assertEquals(sincePayload?.progress?.length, 1);
+    assertEquals(sincePayload?.progress?.[0]?.activity_id, secondActivityId);
+
+    const missingTokenResponse = await fetch(`${functionsBaseUrl}/load`, {
+      method: 'GET',
+    });
+
+    await assertStatusAndDrain(missingTokenResponse, 401);
+
+    const invalidTokenResponse = await fetch(`${functionsBaseUrl}/load`, {
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer invalid-token',
+      },
+    });
+
+    await assertStatusAndDrain(invalidTokenResponse, 401);
   } finally {
     await cleanupTestData({ classCode, studentId, rateLimitIp });
   }
