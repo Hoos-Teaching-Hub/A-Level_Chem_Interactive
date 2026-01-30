@@ -50,11 +50,10 @@ for i in {1..30}; do
   sleep 0.5
 done
 
-# Run tests on the host machine:
-# - SUPABASE_URL points to the host-exposed API (e.g. http://127.0.0.1:54321)
-# - SUPABASE_FUNCTIONS_URL points to the host functions gateway endpoint
+# Run tests on the host machine (Deno test runner also needs SERVER_SALT).
+SERVER_SALT="edge-test-salt-local" \
 SUPABASE_URL="${HOST_API_URL}" \
 SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY}" \
 SUPABASE_FUNCTIONS_URL="${FUNCTIONS_URL}" \
-deno test supabase/functions/tests/edge-functions.test.ts \
+deno test --trace-leaks supabase/functions/tests/edge-functions.test.ts \
   --allow-env --allow-net --allow-read
