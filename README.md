@@ -74,6 +74,53 @@ The plaintext demo class/teacher/student codes are written to `supabase/seed/dem
 and should stay local (not committed). The database only receives SHA-256 hashes derived from
 `<code>:<class_code>:<server_salt>`.
 
+## Supabase Edge Functions (local)
+
+Start the edge functions with the required environment variables. The service role key is
+**server-only**: it must stay in the edge function environment and never be exposed in the frontend.
+
+```sh
+SUPABASE_URL="http://localhost:54321" \
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key" \
+SERVER_SALT="change-me" \
+supabase functions serve --no-verify-jwt
+```
+
+### Edge function curl examples
+
+Replace `${SUPABASE_URL}` with the URL you used above (for example `http://localhost:54321`).
+Session-based endpoints require a bearer token. The `since` example is shown on the load endpoint.
+
+```sh
+# POST /join
+curl -X POST "${SUPABASE_URL}/functions/v1/join" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${SESSION_TOKEN}" \
+  -d '{
+    "class_code": "CHEM101",
+    "student_code": "S-001",
+    "display_name": "Ada"
+  }'
+
+# GET /load (with ?since=)
+curl "${SUPABASE_URL}/functions/v1/load?since=2024-01-01T00:00:00Z" \
+  -H "Authorization: Bearer ${SESSION_TOKEN}"
+
+# POST /save
+curl -X POST "${SUPABASE_URL}/functions/v1/save" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${SESSION_TOKEN}" \
+  -d '{
+    "updates": [
+      { "activity_id": "alcohols-oxidation", "state": { "status": "done" } }
+    ]
+  }'
+
+# GET /teacher/report
+curl "${SUPABASE_URL}/functions/v1/teacher/report?class_code=CHEM101&teacher_code=TEACH-123" \
+  -H "Authorization: Bearer ${SESSION_TOKEN}"
+```
+
 ## Where to add new M0 work
 
 - **Frontend flows (T1):** `src/pages/`, `src/components/`, `src/app/`.
