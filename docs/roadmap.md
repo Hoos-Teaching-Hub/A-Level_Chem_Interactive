@@ -22,7 +22,8 @@
 - Code-based access flow (class code + student code + display name) with server-side hashing.
 - Progress storage with row-level permissions (students can only read/write their own).
 - Minimal teacher view with aggregated stats (coverage + weak topics).
-- Role gating (students cannot access teacher-only views).
+- Role gating (students cannot access teacher-only views). Current frontend gating uses a session
+  storage role flag (`chem.role`) to block teacher routes and UI while backend auth is pending.
 
 ### M1 — Core Learning Surface
 **Goal:** a usable learning map where each reaction/compound has structured knowledge, not just labels.

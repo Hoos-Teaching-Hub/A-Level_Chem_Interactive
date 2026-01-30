@@ -15,6 +15,10 @@ M0 delivers a minimal but secure foundation:
 
 See the M0 task breakdown (T1–T4) in the roadmap for detailed scope and QA checks.
 
+Role gating uses a lightweight session storage flag (`chem.role`) that is set after a successful
+student join or teacher login. The teacher route and teacher-only UI are blocked when the role is
+`student`, keeping the M0 access boundary explicit without adding full auth state yet.
+
 ## Project structure (M0 frontend)
 
 ```

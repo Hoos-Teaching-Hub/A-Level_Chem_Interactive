@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { RoleGate } from './RoleGate';
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   [
@@ -19,9 +20,11 @@ export function App() {
             <NavLink to="/student" className={linkClasses}>
               Student
             </NavLink>
-            <NavLink to="/teacher" className={linkClasses}>
-              Teacher
-            </NavLink>
+            <RoleGate blockedRoles={['student']}>
+              <NavLink to="/teacher" className={linkClasses}>
+                Teacher
+              </NavLink>
+            </RoleGate>
           </nav>
         </div>
       </header>

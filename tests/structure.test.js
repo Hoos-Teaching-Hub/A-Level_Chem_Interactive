@@ -56,6 +56,21 @@ assert.ok(
 const routerContents = readText('src/app/router.tsx');
 assertIncludesAll(routerContents, ["path: 'student'", "path: 'teacher'"], 'router');
 
+const studentPageContents = readText('src/pages/Student.tsx');
+const teacherPageContents = readText('src/pages/Teacher.tsx');
+
+assertIncludesAll(studentPageContents, ['JoinForm', 'Student access'], 'Student page');
+assertIncludesAll(
+  teacherPageContents,
+  ['RoleGate', "blockedRoles={['student']}", 'TeacherLoginForm'],
+  'Teacher page role gate'
+);
+assertIncludesAll(
+  routerContents,
+  ['RoleGuard', "blockedRoles={['student']}"],
+  'Teacher route role guard'
+);
+
 // App layout should include navigation links to key routes.
 const appContents = readText('src/app/App.tsx');
 assertIncludesAll(appContents, ['to="/student"', 'to="/teacher"'], 'App layout');

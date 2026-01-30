@@ -23,7 +23,9 @@ Use this checklist to confirm the M0 milestone is ready:
 - [ ] **Auth flow**: Code-based join/login (class code + student code + display name) works end-to-end with server-side hashing.
 - [ ] **Row-level security (RLS)**: Students can only read/write their own progress records.
 - [ ] **Teacher report**: Teacher view shows aggregated coverage and weak topics without exposing student identities.
-- [ ] **Role gating**: Student accounts cannot access teacher-only pages or endpoints.
+- [ ] **Role gating**: Student accounts cannot access teacher-only pages or endpoints. The current
+      frontend uses a session storage flag (`chem.role`) to block teacher routes/UI until backend
+      auth is in place.
 
 ## Relevant tests to link into M0 work
 

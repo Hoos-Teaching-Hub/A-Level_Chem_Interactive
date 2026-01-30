@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 import { joinPayloadSchema } from '../validators/join';
 import { apiClient } from '../api/client';
+import { setStoredRole } from '../app/roleStore';
 
 type JoinPayload = z.infer<typeof joinPayloadSchema>;
 
@@ -33,6 +34,7 @@ export function JoinForm() {
     console.log('student.join', parsed.data);
     try {
       await apiClient.join(parsed.data);
+      setStoredRole('student');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to join right now.';
       setError(message);

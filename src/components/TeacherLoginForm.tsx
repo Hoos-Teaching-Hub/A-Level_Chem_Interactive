@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 import { teacherLoginSchema } from '../validators/teacher';
 import { apiClient } from '../api/client';
+import { setStoredRole } from '../app/roleStore';
 
 type TeacherLoginPayload = z.infer<typeof teacherLoginSchema>;
 
@@ -32,6 +33,7 @@ export function TeacherLoginForm() {
     console.log('teacher.login', parsed.data);
     try {
       await apiClient.teacherLogin(parsed.data);
+      setStoredRole('teacher');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to sign in right now.';
       setError(message);
