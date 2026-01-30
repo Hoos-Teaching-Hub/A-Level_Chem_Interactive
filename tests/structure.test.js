@@ -1,10 +1,14 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
+const {
+  assertDirectoryExists,
+  assertFileExists,
+  assertIncludesAll,
+  readJson,
+  readText,
+} = require('./test-utils');
 
 // This test verifies critical files, dependencies, and route wiring so
 // project structure changes don't accidentally break the app shell.
-const repoRoot = path.resolve(__dirname, '..');
 
 // Files that must exist for the UI to render and the legacy map to stay reachable.
 const requiredFiles = [
@@ -21,14 +25,11 @@ const requiredFiles = [
 ];
 
 requiredFiles.forEach((relativePath) => {
-  const fullPath = path.join(repoRoot, relativePath);
-  assert.ok(fs.existsSync(fullPath), `Expected ${relativePath} to exist.`);
+  assertFileExists(relativePath);
 });
 
 // Ensure package.json still lists core runtime dependencies.
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
-);
+const packageJson = readJson('package.json');
 
 const expectedDependencies = [
   'react',
@@ -52,36 +53,15 @@ assert.ok(
 );
 
 // Route definitions must include the student/teacher entry points.
-const routerContents = fs.readFileSync(
-  path.join(repoRoot, 'src/app/router.tsx'),
-  'utf8'
-);
-
-["path: 'student'", "path: 'teacher'"].forEach((snippet) => {
-  assert.ok(
-    routerContents.includes(snippet),
-    `Expected router to include ${snippet}.`
-  );
-});
+const routerContents = readText('src/app/router.tsx');
+assertIncludesAll(routerContents, ["path: 'student'", "path: 'teacher'"], 'router');
 
 // App layout should include navigation links to key routes.
-const appContents = fs.readFileSync(
-  path.join(repoRoot, 'src/app/App.tsx'),
-  'utf8'
-);
-
-['to="/student"', 'to="/teacher"'].forEach((snippet) => {
-  assert.ok(
-    appContents.includes(snippet),
-    `Expected App layout to include ${snippet}.`
-  );
-});
+const appContents = readText('src/app/App.tsx');
+assertIncludesAll(appContents, ['to="/student"', 'to="/teacher"'], 'App layout');
 
 // Legacy index should preserve branding and link to the organic map page.
-const legacyIndex = fs.readFileSync(
-  path.join(repoRoot, 'public/legacy/index.html'),
-  'utf8'
-);
+const legacyIndex = readText('public/legacy/index.html');
 
 assert.ok(
   legacyIndex.includes('A-Level Chemistry Interactive'),
@@ -91,5 +71,12 @@ assert.ok(
   legacyIndex.includes('organic-map.html'),
   'Expected legacy index to link to organic map.'
 );
+
+// Edge functions should remain present to support M0 auth + progress sync.
+['supabase/functions/join', 'supabase/functions/load', 'supabase/functions/save', 'supabase/functions/teacher']
+  .forEach((relativePath) => {
+    assertDirectoryExists(relativePath);
+    assertFileExists(`${relativePath}/index.ts`);
+  });
 
 console.log('Verified required files, dependencies, routes, and legacy assets.');

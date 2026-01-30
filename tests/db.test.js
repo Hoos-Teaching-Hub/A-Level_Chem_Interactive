@@ -1,70 +1,58 @@
 const assert = require('assert');
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
+const { assertFileExists, assertIncludesAll, readText, resolveRepoPath } = require('./test-utils');
 
 // This test enforces the existence and critical content of Supabase migration
 // and seed scripts so database setup doesn't drift from the backend code.
-const repoRoot = path.resolve(__dirname, '..');
 
 // Keep paths explicit so renames are caught by tests.
-const migrationPath = path.join(
-  repoRoot,
+const migrationPath = resolveRepoPath(
   'supabase/migrations/20250920000100_create_m0_tables.sql'
 );
-const seedScriptPath = path.join(repoRoot, 'supabase/seed/seed-demo.mjs');
+const seedScriptPath = resolveRepoPath('supabase/seed/seed-demo.mjs');
 
 // Ensure key files exist.
-assert.ok(
-  fs.existsSync(migrationPath),
-  'Expected migration file for M0 tables to exist.'
-);
-assert.ok(
-  fs.existsSync(seedScriptPath),
-  'Expected demo seed generator to exist.'
-);
+assertFileExists('supabase/migrations/20250920000100_create_m0_tables.sql');
+assertFileExists('supabase/seed/seed-demo.mjs');
 
 // Validate SQL fragments so the schema keeps its security-critical columns.
-const migrationSql = fs.readFileSync(migrationPath, 'utf8');
-[
-  'create table if not exists classes',
-  'teacher_code_hash',
-  'create table if not exists students',
-  'student_code_hash',
-  'create table if not exists sessions',
-  'token_hash',
-  'create table if not exists progress',
-  'primary key (student_id, activity_id)',
-].forEach((snippet) => {
-  assert.ok(
-    migrationSql.includes(snippet),
-    `Expected migration to include: ${snippet}`
-  );
-});
+const migrationSql = readText('supabase/migrations/20250920000100_create_m0_tables.sql');
+assertIncludesAll(
+  migrationSql,
+  [
+    'create table if not exists classes',
+    'teacher_code_hash',
+    'create table if not exists students',
+    'student_code_hash',
+    'create table if not exists sessions',
+    'token_hash',
+    'create table if not exists progress',
+    'primary key (student_id, activity_id)',
+  ],
+  'migration'
+);
 
-[
-  'class_code text not null references classes(class_code)',
-  'student_code_hash text not null',
-  'create unique index if not exists students_class_code_student_code_hash_key',
-  'token_hash text primary key',
-  'expires_at timestamptz not null',
-  'student_id uuid not null references students(id)',
-  'primary key (student_id, activity_id)',
-].forEach((snippet) => {
-  assert.ok(
-    migrationSql.includes(snippet),
-    `Expected migration to enforce: ${snippet}`
-  );
-});
+assertIncludesAll(
+  migrationSql,
+  [
+    'class_code text not null references classes(class_code)',
+    'student_code_hash text not null',
+    'create unique index if not exists students_class_code_student_code_hash_key',
+    'token_hash text primary key',
+    'expires_at timestamptz not null',
+    'student_id uuid not null references students(id)',
+    'primary key (student_id, activity_id)',
+  ],
+  'migration constraints'
+);
 
 // Verify the seed generator includes hashing and writes the correct artifacts.
-const seedScript = fs.readFileSync(seedScriptPath, 'utf8');
-['SERVER_SALT', 'sha256', 'seed-demo.sql', 'demo-codes.txt'].forEach((snippet) => {
-  assert.ok(
-    seedScript.includes(snippet),
-    `Expected seed script to include: ${snippet}`
-  );
-});
+const seedScript = readText('supabase/seed/seed-demo.mjs');
+assertIncludesAll(
+  seedScript,
+  ['SERVER_SALT', 'sha256', 'seed-demo.sql', 'demo-codes.txt'],
+  'seed script'
+);
 
 assert.ok(
   seedScript.includes("digest('hex')"),
@@ -77,6 +65,7 @@ const hashSample = crypto
   .update('hash-sample')
   .digest('hex');
 
+// This guards against accidental changes to the hashing method/output format.
 assert.ok(
   /^[a-f0-9]{64}$/.test(hashSample),
   'Expected SHA-256 hex digest to be 64 characters.'

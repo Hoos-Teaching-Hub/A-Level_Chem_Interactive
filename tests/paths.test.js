@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { gData } = require('../src/js/data');
+const { assertIncludesAll } = require('./test-utils');
 
 // This test protects core reaction graph wiring so refactors do not drop
 // canonical links relied on by the UI and quiz content.
@@ -60,19 +61,29 @@ const expectedPaths = [
     ['Chloroalkene', 'PVC', 'Addition Polymerisation', 'Addition Polymerisation']
 ];
 
+const toPathKey = (source, target, label, type) =>
+    `${source}|${target}|${label}|${type}`;
+
 // Convert all links to a stable string key so we can do O(1) existence checks.
 const actualPaths = new Set(
-    gData.links.map(link => `${link.source}|${link.target}|${link.label}|${link.type}`)
+    gData.links.map(link => toPathKey(link.source, link.target, link.label, link.type))
 );
 
 // Assert that every expected path is present in the graph data.
 expectedPaths.forEach(([source, target, label, type]) => {
-    const key = `${source}|${target}|${label}|${type}`;
+    const key = toPathKey(source, target, label, type);
     assert(
         actualPaths.has(key),
         `Expected path missing: ${source} -> ${target} (${label}, ${type})`
     );
 });
+
+// Ensure the underlying dataset did not shrink unexpectedly.
+assertIncludesAll(
+    Array.from(actualPaths).join('\n'),
+    expectedPaths.map(([source, target, label, type]) => toPathKey(source, target, label, type)),
+    'reaction graph'
+);
 
 // Print the count to keep CI output stable and easy to scan.
 console.log(`Verified ${expectedPaths.length} reaction paths remain intact.`);

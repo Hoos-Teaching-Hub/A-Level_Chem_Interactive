@@ -35,6 +35,14 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   },
 });
 
+const randomSuffix = () => crypto.randomUUID().slice(0, 8);
+const makeClassCode = () => `class_${randomSuffix()}`;
+const makeStudentCode = () => `student_${randomSuffix()}`;
+const makeTeacherCode = () => `teach_${randomSuffix()}`;
+const makeActivityId = () => `activity_${randomSuffix()}`;
+const makeRateLimitIp = (octet = Math.floor(Math.random() * 200) + 1) =>
+  `203.0.113.${octet}`;
+
 async function sleep(ms: number): Promise<void> {
   return await new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -113,6 +121,7 @@ async function cleanupTestData(params: {
 }): Promise<void> {
   const { classCode, studentId, studentIds, rateLimitIp } = params;
 
+  // Cleaning in dependency order prevents foreign key errors when rows exist.
   const idsToCleanup = [studentId, ...(studentIds ?? [])].filter(
     (id): id is string => Boolean(id),
   );
@@ -148,10 +157,10 @@ async function joinSession(params: {
 }
 
 Deno.test("POST /join creates a session", async () => {
-  const classCode = `class_${crypto.randomUUID().slice(0, 8)}`;
-  const studentCode = `student_${crypto.randomUUID().slice(0, 8)}`;
+  const classCode = makeClassCode();
+  const studentCode = makeStudentCode();
   const displayName = "Edge Student";
-  const rateLimitIp = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+  const rateLimitIp = makeRateLimitIp();
   let studentId: string | undefined;
 
   try {
@@ -186,11 +195,11 @@ Deno.test("POST /join creates a session", async () => {
 });
 
 Deno.test("POST /save updates progress and updated_at", async () => {
-  const classCode = `class_${crypto.randomUUID().slice(0, 8)}`;
-  const studentCode = `student_${crypto.randomUUID().slice(0, 8)}`;
+  const classCode = makeClassCode();
+  const studentCode = makeStudentCode();
   const displayName = "Edge Saver";
-  const rateLimitIp = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
-  const activityId = `activity_${crypto.randomUUID().slice(0, 8)}`;
+  const rateLimitIp = makeRateLimitIp();
+  const activityId = makeActivityId();
   let studentId: string | undefined;
 
   try {
@@ -250,12 +259,12 @@ Deno.test("POST /save updates progress and updated_at", async () => {
 });
 
 Deno.test("GET /load returns progress with optional since filter", async () => {
-  const classCode = `class_${crypto.randomUUID().slice(0, 8)}`;
-  const studentCode = `student_${crypto.randomUUID().slice(0, 8)}`;
+  const classCode = makeClassCode();
+  const studentCode = makeStudentCode();
   const displayName = "Edge Loader";
-  const rateLimitIp = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
-  const firstActivityId = `activity_${crypto.randomUUID().slice(0, 8)}`;
-  const secondActivityId = `activity_${crypto.randomUUID().slice(0, 8)}`;
+  const rateLimitIp = makeRateLimitIp();
+  const firstActivityId = makeActivityId();
+  const secondActivityId = makeActivityId();
   let studentId: string | undefined;
 
   try {
@@ -346,17 +355,17 @@ Deno.test("GET /load returns progress with optional since filter", async () => {
 });
 
 Deno.test("GET /teacher/report returns aggregates with valid teacher code", async () => {
-  const classCode = `class_${crypto.randomUUID().slice(0, 8)}`;
-  const teacherCode = `teach_${crypto.randomUUID().slice(0, 8)}`;
+  const classCode = makeClassCode();
+  const teacherCode = makeTeacherCode();
   const teacherCodeHash = await hashCode(teacherCode, classCode);
-  const firstStudentCode = `student_${crypto.randomUUID().slice(0, 8)}`;
-  const secondStudentCode = `student_${crypto.randomUUID().slice(0, 8)}`;
+  const firstStudentCode = makeStudentCode();
+  const secondStudentCode = makeStudentCode();
   const firstDisplayName = "Edge Learner One";
   const secondDisplayName = "Edge Learner Two";
-  const firstRateLimitIp = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+  const firstRateLimitIp = makeRateLimitIp();
   const secondRateLimitIp = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
-  const firstActivityId = `activity_${crypto.randomUUID().slice(0, 8)}`;
-  const secondActivityId = `activity_${crypto.randomUUID().slice(0, 8)}`;
+  const firstActivityId = makeActivityId();
+  const secondActivityId = makeActivityId();
   const studentIds: string[] = [];
 
   try {
@@ -458,10 +467,10 @@ Deno.test("GET /teacher/report returns aggregates with valid teacher code", asyn
 });
 
 Deno.test("GET /teacher/report returns 403 for invalid teacher code", async () => {
-  const classCode = `class_${crypto.randomUUID().slice(0, 8)}`;
-  const teacherCode = `teach_${crypto.randomUUID().slice(0, 8)}`;
+  const classCode = makeClassCode();
+  const teacherCode = makeTeacherCode();
   const teacherCodeHash = await hashCode(teacherCode, classCode);
-  const rateLimitIp = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+  const rateLimitIp = makeRateLimitIp();
 
   try {
     await createClass(classCode, teacherCodeHash);
