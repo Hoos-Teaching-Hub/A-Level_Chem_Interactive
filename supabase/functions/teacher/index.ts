@@ -14,6 +14,8 @@ import {
   z,
 } from '../_shared/validation.ts';
 
+// Teacher report can authenticate with either raw teacher code or a pre-hashed
+// value to support environments that avoid sending plaintext codes.
 const ReportQuerySchema = z
   .object({
     class_code: z.string().min(2),
@@ -23,6 +25,7 @@ const ReportQuerySchema = z
   .strict();
 
 function formatDateBucket(value: string): string {
+  // Bucket timestamps by day (YYYY-MM-DD) for activity trend charts.
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return 'unknown';
@@ -33,6 +36,7 @@ function formatDateBucket(value: string): string {
 serve(async (request) => {
   const url = new URL(request.url);
 
+  // Handle CORS preflight to allow browser requests.
   const preflight = handlePreflight(request);
   if (preflight) {
     return preflight;
@@ -42,6 +46,7 @@ serve(async (request) => {
     return badRequest('Invalid request method.');
   }
 
+  // Explicitly guard the route so accidental function reuse doesn't expose data.
   if (request.method !== 'GET' || url.pathname !== '/teacher/report') {
     return notFound('Method not found.');
   }
@@ -52,6 +57,7 @@ serve(async (request) => {
   }
 
   const { class_code } = parsedQuery.data;
+  // Support teacher code in either query string or headers.
   const teacherCodeFromQuery = parsedQuery.data.teacher_code;
   const teacherCodeHashFromQuery = parsedQuery.data.teacher_code_hash;
   const teacherCodeHeader = request.headers.get('x-teacher-code');
@@ -59,6 +65,8 @@ serve(async (request) => {
   const teacher_code = teacherCodeFromQuery ?? teacherCodeHeader;
   const teacher_code_hash = teacherCodeHashFromQuery ?? teacherCodeHashHeader;
 
+  // If a plaintext teacher code is provided, hash it with class code + salt.
+  // Otherwise use the provided hash directly.
   const resolvedTeacherHash = teacher_code
     ? await hashCode(teacher_code, class_code)
     : teacher_code_hash;
@@ -67,6 +75,7 @@ serve(async (request) => {
     return badRequest('Missing teacher code.');
   }
 
+  // Validate teacher access by comparing hashes stored on the class record.
   const { data: classRow, error: classError } = await supabase
     .from('classes')
     .select('class_code, teacher_code_hash')
@@ -85,6 +94,7 @@ serve(async (request) => {
     return forbidden('Invalid teacher code.');
   }
 
+  // Aggregate totals in parallel for responsiveness.
   const [{ count: totalStudents, error: totalError }, { count: activeStudents, error: activeError }]
     = await Promise.all([
       supabase
@@ -102,6 +112,7 @@ serve(async (request) => {
     return internalServerError('Failed to load student stats.');
   }
 
+  // Fetch students for leaderboard and last-seen display.
   const { data: students, error: studentsError } = await supabase
     .from('students')
     .select('id, display_name, last_seen_at')
@@ -111,6 +122,7 @@ serve(async (request) => {
     return internalServerError('Failed to load student list.');
   }
 
+  // Pull progress rows scoped to the class via the students join.
   const { data: progressRows, error: progressError } = await supabase
     .from('progress')
     .select('activity_id, updated_at, student_id, students!inner(class_code)')
@@ -120,6 +132,7 @@ serve(async (request) => {
     return internalServerError('Failed to load progress stats.');
   }
 
+  // Aggregate per-activity totals plus daily counts for trend charts.
   const activitySummary = new Map<
     string,
     { activity_id: string; total: number; updated_at_buckets: Record<string, number> }
@@ -146,6 +159,7 @@ serve(async (request) => {
     );
   }
 
+  // Top 10 students by completed activities (ties preserved by stable sort order).
   const leaderboard = (students ?? [])
     .map((student) => ({
       student_id: student.id,

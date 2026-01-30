@@ -1,7 +1,9 @@
+// Standard headers for JSON responses.
 export const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
 };
 
+// CORS headers allow browser-based clients to call edge functions directly.
 export const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -9,6 +11,7 @@ export const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
+// Shared error codes keep API responses consistent across functions.
 export const ErrorCode = {
   BAD_REQUEST: 'bad_request',
   UNAUTHORIZED: 'unauthorized',
@@ -21,6 +24,7 @@ export const ErrorCode = {
 export type ErrorCodeType = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export function jsonResponse(payload: unknown, status = 200): Response {
+  // Wrap payloads with JSON + CORS headers so browser clients can consume them.
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
@@ -36,6 +40,7 @@ export function errorResponse(
   message: string,
   details?: unknown,
 ): Response {
+  // Standard error response structure used by frontend clients.
   return jsonResponse(
     {
       error: {

@@ -1,6 +1,11 @@
 const assert = require('assert');
 const { gData } = require('../src/js/data');
 
+// This test protects core reaction graph wiring so refactors do not drop
+// canonical links relied on by the UI and quiz content.
+
+// Each entry is [source, target, label, type].
+// If you add new nodes or rename labels, update this list intentionally.
 const expectedPaths = [
     ['AlcoholGroup', 'Alc1', 'Class', 'structure'],
     ['AlcoholGroup', 'Alc2', 'Class', 'structure'],
@@ -55,10 +60,12 @@ const expectedPaths = [
     ['Chloroalkene', 'PVC', 'Addition Polymerisation', 'Addition Polymerisation']
 ];
 
+// Convert all links to a stable string key so we can do O(1) existence checks.
 const actualPaths = new Set(
     gData.links.map(link => `${link.source}|${link.target}|${link.label}|${link.type}`)
 );
 
+// Assert that every expected path is present in the graph data.
 expectedPaths.forEach(([source, target, label, type]) => {
     const key = `${source}|${target}|${label}|${type}`;
     assert(
@@ -67,4 +74,5 @@ expectedPaths.forEach(([source, target, label, type]) => {
     );
 });
 
+// Print the count to keep CI output stable and easy to scan.
 console.log(`Verified ${expectedPaths.length} reaction paths remain intact.`);
