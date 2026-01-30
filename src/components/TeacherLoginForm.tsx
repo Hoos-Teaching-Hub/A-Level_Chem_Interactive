@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { z } from 'zod';
 import { teacherLoginSchema } from '../validators/teacher';
-import { apiClient } from '../api/client';
+import { apiClient } from '../api/api';
+import { setTeacherCode } from '../student/storage';
 
 type TeacherLoginPayload = z.infer<typeof teacherLoginSchema>;
 
@@ -31,7 +32,8 @@ export function TeacherLoginForm() {
 
     console.log('teacher.login', parsed.data);
     try {
-      await apiClient.teacherLogin(parsed.data);
+      await apiClient.teacherReport(parsed.data);
+      setTeacherCode(parsed.data.teacherCode);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to sign in right now.';
       setError(message);

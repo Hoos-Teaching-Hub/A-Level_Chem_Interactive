@@ -55,6 +55,17 @@ Set the API base URL for the frontend fetch helpers:
 VITE_API_BASE_URL="https://api.example.com"
 ```
 
+## Offline behavior (student MVP)
+
+The student flow is offline-first for M0:
+
+- `session_token` is persisted in `localStorage` after a successful join (domain-scoped).
+- Teacher codes live in `sessionStorage` and are cleared on tab close.
+- Activity progress is written to `localStorage` first and synced to the API afterward.
+- If sync fails, the UI shows **“已保存在本机，联网后可再次同步”** and allows manual retry.
+- On load, local progress renders immediately, then server data is merged using the latest
+  `updated_at` timestamp as the winner.
+
 ## Database initialization (Supabase)
 
 Follow the M0 roadmap task (T2) by applying the migrations under `supabase/migrations/`.

@@ -1,42 +1,41 @@
 import { useState } from 'react';
 import { z } from 'zod';
 import { joinPayloadSchema } from '../validators/join';
-import { apiClient } from '../api/client';
 
-type JoinPayload = z.infer<typeof joinPayloadSchema>;
+export type JoinValues = z.infer<typeof joinPayloadSchema>;
 
-const initialState: JoinPayload = {
+const initialState: JoinValues = {
   classCode: '',
   studentCode: '',
   displayName: '',
 };
 
-export function JoinForm() {
-  const [values, setValues] = useState<JoinPayload>(initialState);
-  const [error, setError] = useState<string | null>(null);
+interface StudentJoinFormProps {
+  onJoin: (values: JoinValues) => void;
+  isLoading: boolean;
+  error?: string | null;
+}
+
+export function StudentJoinForm({ onJoin, isLoading, error }: StudentJoinFormProps) {
+  const [values, setValues] = useState<JoinValues>(initialState);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
+    setValidationError(null);
 
     const parsed = joinPayloadSchema.safeParse(values);
     if (!parsed.success) {
-      setError(parsed.error.errors[0]?.message ?? 'Invalid input.');
+      setValidationError(parsed.error.errors[0]?.message ?? 'Invalid input.');
       return;
     }
 
-    console.log('student.join', parsed.data);
-    try {
-      await apiClient.join(parsed.data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to join right now.';
-      setError(message);
-    }
+    onJoin(parsed.data);
   };
 
   return (
@@ -77,12 +76,14 @@ export function JoinForm() {
           required
         />
       </label>
+      {validationError ? <p className="text-sm text-rose-300">{validationError}</p> : null}
       {error ? <p className="text-sm text-rose-300">{error}</p> : null}
       <button
         type="submit"
-        className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950"
+        disabled={isLoading}
+        className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60"
       >
-        Join class
+        {isLoading ? 'Joining…' : 'Join class'}
       </button>
     </form>
   );
