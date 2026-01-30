@@ -62,4 +62,6 @@ jobs:
           fi
 
       - name: Run Edge Functions tests
+        env:
+          SERVER_SALT: edge-test-salt-local
         run: bash scripts/test-edge.sh

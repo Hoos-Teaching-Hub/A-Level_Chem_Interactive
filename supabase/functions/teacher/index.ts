@@ -1,18 +1,18 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { supabase } from '../../_shared/supabase.ts';
+import { supabase } from '../_shared/supabase.ts';
 import {
   badRequest,
   forbidden,
   internalServerError,
   jsonResponse,
   notFound,
-} from '../../_shared/errors.ts';
-import { hashCode } from '../../_shared/hash.ts';
+} from '../_shared/errors.ts';
+import { hashCode } from '../_shared/hash.ts';
 import {
   handlePreflight,
   validateQuery,
   z,
-} from '../../_shared/validation.ts';
+} from '../_shared/validation.ts';
 
 const ReportQuerySchema = z
   .object({
@@ -31,6 +31,8 @@ function formatDateBucket(value: string): string {
 }
 
 serve(async (request) => {
+  const url = new URL(request.url);
+
   const preflight = handlePreflight(request);
   if (preflight) {
     return preflight;
@@ -38,6 +40,10 @@ serve(async (request) => {
 
   if (request.method !== 'GET') {
     return badRequest('Invalid request method.');
+  }
+
+  if (request.method !== 'GET' || url.pathname !== '/teacher/report') {
+    return notFound('Method not found.');
   }
 
   const parsedQuery = validateQuery(request, ReportQuerySchema);
