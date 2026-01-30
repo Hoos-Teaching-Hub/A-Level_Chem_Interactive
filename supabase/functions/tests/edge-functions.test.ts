@@ -484,3 +484,99 @@ Deno.test("GET /teacher/report returns 403 for invalid teacher code", async () =
     await cleanupTestData({ classCode, rateLimitIp });
   }
 });
+
+Deno.test("Sessions cannot read or write another student's progress", async () => {
+  const classCode = makeClassCode();
+  const firstStudentCode = makeStudentCode();
+  const secondStudentCode = makeStudentCode();
+  const firstDisplayName = "Isolated Learner A";
+  const secondDisplayName = "Isolated Learner B";
+  const firstRateLimitIp = makeRateLimitIp();
+  const secondRateLimitIp = makeRateLimitIp();
+  const sharedActivityId = makeActivityId();
+  const studentIds: string[] = [];
+
+  try {
+    await createClass(classCode);
+
+    const firstJoin = await joinSession({
+      classCode,
+      studentCode: firstStudentCode,
+      displayName: firstDisplayName,
+      rateLimitIp: firstRateLimitIp,
+    });
+    const secondJoin = await joinSession({
+      classCode,
+      studentCode: secondStudentCode,
+      displayName: secondDisplayName,
+      rateLimitIp: secondRateLimitIp,
+    });
+
+    studentIds.push(firstJoin.student_profile.id, secondJoin.student_profile.id);
+
+    await fetchDiscard(`${functionsBaseUrl}/save`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${secondJoin.session_token}`,
+      },
+      body: JSON.stringify({
+        updates: [
+          {
+            activity_id: sharedActivityId,
+            state: { progress: 0.6 },
+          },
+        ],
+      }),
+    }, 200);
+
+    const firstLoad = await fetchJson<any>(`${functionsBaseUrl}/load`, {
+      method: "GET",
+      headers: {
+        authorization: `Bearer ${firstJoin.session_token}`,
+      },
+    }, 200);
+
+    const firstActivityIds = (firstLoad?.progress ?? []).map(
+      (item: { activity_id: string }) => item.activity_id,
+    );
+    assertEquals(firstActivityIds.includes(sharedActivityId), false);
+
+    await fetchDiscard(`${functionsBaseUrl}/save`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${firstJoin.session_token}`,
+      },
+      body: JSON.stringify({
+        updates: [
+          {
+            activity_id: sharedActivityId,
+            state: { progress: 0.2 },
+          },
+        ],
+      }),
+    }, 200);
+
+    // Use the same activity id to ensure writes remain scoped to the owning session.
+    const secondLoad = await fetchJson<any>(`${functionsBaseUrl}/load`, {
+      method: "GET",
+      headers: {
+        authorization: `Bearer ${secondJoin.session_token}`,
+      },
+    }, 200);
+
+    const secondProgress = (secondLoad?.progress ?? []).find(
+      (item: { activity_id: string }) => item.activity_id === sharedActivityId,
+    );
+    assertExists(secondProgress);
+    assertEquals(secondProgress.state, { progress: 0.6 });
+  } finally {
+    await cleanupTestData({
+      classCode,
+      studentIds,
+      rateLimitIp: firstRateLimitIp,
+    });
+    await supabase.from("rate_limits").delete().eq("ip", secondRateLimitIp);
+  }
+});

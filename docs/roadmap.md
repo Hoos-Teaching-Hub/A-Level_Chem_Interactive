@@ -186,6 +186,7 @@
   - `quizData` structure where required.
   - No orphan nodes.
   - Level/topic tags present for A2 additions.
+  - Edge function session isolation (students cannot read/write each other's progress).
 
 ---
 
