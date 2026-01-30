@@ -20,8 +20,10 @@ import {
   setSessionToken,
 } from '../student/storage';
 
-const offlineJoinMessage = '无法连接服务器，已进入离线模式。进度会保存到本机。';
-const offlineSaveMessage = '已保存在本机，联网后可再次同步。';
+const offlineJoinMessage =
+  'Unable to reach the server. You are now in offline mode and progress will be stored locally.';
+const offlineSaveMessage =
+  'Saved locally. Reconnect to sync, or retry manually when you are back online.';
 
 export function Student() {
   const [sessionToken, setSessionTokenState] = useState<string | null>(() => getSessionToken());
@@ -78,6 +80,7 @@ export function Student() {
       if (!data) {
         return;
       }
+      // Merge remote updates into local progress using the newest updated_at timestamp.
       setProgressMap((current) => {
         const merged = mergeProgress(current, data.updates ?? []);
         persistProgressMap(merged);
@@ -151,12 +154,14 @@ export function Student() {
 
     const nextMap = { ...progressMap, [selectedActivity.id]: nextProgress };
     setProgressMap(nextMap);
+    // Persist locally first so progress survives refreshes or offline sessions.
     setActivityProgress(nextProgress);
 
     const nextPending = { ...pendingUpdates, [selectedActivity.id]: nextProgress };
     setPendingUpdates(nextPending);
 
     if (sessionToken) {
+      // Attempt to sync immediately; failures fall back to manual retry.
       saveMutation.mutate([nextProgress]);
     } else {
       setSyncStatus('offline');
