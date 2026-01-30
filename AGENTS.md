@@ -8,3 +8,4 @@
 - Confirm with the user before modifying `AGENTS.md` or anything under `tests/`.
 - Use `docs/roadmap.md` as the development guideline.
 - Add detailed comments for non-trivial logic in new or refactored code.
+- Keep each commit focused on a single functional change.
