@@ -9,6 +9,8 @@ import {
 import { hashToken } from '../_shared/hash.ts';
 import { getBearerToken, handlePreflight, validateJson, z } from '../_shared/validation.ts';
 
+// Schema for progress updates. We accept a batch so clients can sync multiple
+// activities in one request, reducing round-trips.
 const SaveSchema = z
   .object({
     updates: z
@@ -25,6 +27,7 @@ const SaveSchema = z
   .strict();
 
 serve(async (request) => {
+  // CORS preflight handling shared across edge functions.
   const preflight = handlePreflight(request);
   if (preflight) {
     return preflight;
@@ -34,6 +37,7 @@ serve(async (request) => {
     return badRequest('Invalid request method.');
   }
 
+  // Sessions are authenticated via a bearer token issued by the join endpoint.
   const token = getBearerToken(request);
   if (!token) {
     return unauthorized('Missing session token.');
@@ -44,6 +48,7 @@ serve(async (request) => {
     return parsed.response;
   }
 
+  // Only hashed tokens are stored in the database; compare hashes for security.
   const token_hash = await hashToken(token);
 
   const { data: session, error: sessionError } = await supabase
@@ -60,11 +65,13 @@ serve(async (request) => {
     return unauthorized('Invalid session token.');
   }
 
+  // Enforce session expiry on every write to prevent stale tokens from updating state.
   const expiresAt = new Date(session.expires_at);
   if (!Number.isNaN(expiresAt.getTime()) && expiresAt < new Date()) {
     return unauthorized('Session token expired.');
   }
 
+  // Normalize timestamps so all updates in the batch share a consistent `updated_at`.
   const now = new Date().toISOString();
   const records = parsed.data.updates.map((update) => ({
     student_id: session.student_id,
@@ -73,6 +80,7 @@ serve(async (request) => {
     updated_at: now,
   }));
 
+  // Upsert keeps the latest state for each activity while allowing first-time inserts.
   const { data: progressRows, error: progressError } = await supabase
     .from('progress')
     .upsert(records, { onConflict: 'student_id,activity_id' })
@@ -82,6 +90,7 @@ serve(async (request) => {
     return internalServerError('Failed to save progress.');
   }
 
+  // Update activity timestamps for both the session and the student profile.
   const { error: sessionUpdateError } = await supabase
     .from('sessions')
     .update({ last_seen_at: now })
@@ -100,6 +109,7 @@ serve(async (request) => {
     return internalServerError('Failed to update student.');
   }
 
+  // Return updated timestamps so clients can store a consistent sync marker.
   return jsonResponse({
     updated_at: now,
     progress: progressRows ?? [],

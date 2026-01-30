@@ -3,14 +3,18 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
+// This test enforces the existence and critical content of Supabase migration
+// and seed scripts so database setup doesn't drift from the backend code.
 const repoRoot = path.resolve(__dirname, '..');
 
+// Keep paths explicit so renames are caught by tests.
 const migrationPath = path.join(
   repoRoot,
   'supabase/migrations/20250920000100_create_m0_tables.sql'
 );
 const seedScriptPath = path.join(repoRoot, 'supabase/seed/seed-demo.mjs');
 
+// Ensure key files exist.
 assert.ok(
   fs.existsSync(migrationPath),
   'Expected migration file for M0 tables to exist.'
@@ -20,6 +24,7 @@ assert.ok(
   'Expected demo seed generator to exist.'
 );
 
+// Validate SQL fragments so the schema keeps its security-critical columns.
 const migrationSql = fs.readFileSync(migrationPath, 'utf8');
 [
   'create table if not exists classes',
@@ -52,6 +57,7 @@ const migrationSql = fs.readFileSync(migrationPath, 'utf8');
   );
 });
 
+// Verify the seed generator includes hashing and writes the correct artifacts.
 const seedScript = fs.readFileSync(seedScriptPath, 'utf8');
 ['SERVER_SALT', 'sha256', 'seed-demo.sql', 'demo-codes.txt'].forEach((snippet) => {
   assert.ok(
@@ -65,6 +71,7 @@ assert.ok(
   'Expected seed script to store SHA-256 hashes as hex.'
 );
 
+// Quick sanity check: SHA-256 hex digests are always 64 characters.
 const hashSample = crypto
   .createHash('sha256')
   .update('hash-sample')

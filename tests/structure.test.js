@@ -2,8 +2,11 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
+// This test verifies critical files, dependencies, and route wiring so
+// project structure changes don't accidentally break the app shell.
 const repoRoot = path.resolve(__dirname, '..');
 
+// Files that must exist for the UI to render and the legacy map to stay reachable.
 const requiredFiles = [
   'public/legacy/index.html',
   'public/legacy/organic-map.html',
@@ -22,6 +25,7 @@ requiredFiles.forEach((relativePath) => {
   assert.ok(fs.existsSync(fullPath), `Expected ${relativePath} to exist.`);
 });
 
+// Ensure package.json still lists core runtime dependencies.
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
 );
@@ -41,11 +45,13 @@ expectedDependencies.forEach((dep) => {
   );
 });
 
+// Tailwind is required for styling across the app.
 assert.ok(
   packageJson.devDependencies && packageJson.devDependencies.tailwindcss,
   'Expected devDependency tailwindcss in package.json.'
 );
 
+// Route definitions must include the student/teacher entry points.
 const routerContents = fs.readFileSync(
   path.join(repoRoot, 'src/app/router.tsx'),
   'utf8'
@@ -58,6 +64,7 @@ const routerContents = fs.readFileSync(
   );
 });
 
+// App layout should include navigation links to key routes.
 const appContents = fs.readFileSync(
   path.join(repoRoot, 'src/app/App.tsx'),
   'utf8'
@@ -70,6 +77,7 @@ const appContents = fs.readFileSync(
   );
 });
 
+// Legacy index should preserve branding and link to the organic map page.
 const legacyIndex = fs.readFileSync(
   path.join(repoRoot, 'public/legacy/index.html'),
   'utf8'

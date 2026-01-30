@@ -14,6 +14,7 @@ import {
   z,
 } from '../_shared/validation.ts';
 
+// Query schema allows optional incremental sync via `since` timestamp.
 const LoadQuerySchema = z
   .object({
     since: z.string().datetime().optional(),
@@ -21,6 +22,7 @@ const LoadQuerySchema = z
   .strict();
 
 serve(async (request) => {
+  // Handle CORS preflight to support browser clients.
   const preflight = handlePreflight(request);
   if (preflight) {
     return preflight;
@@ -30,11 +32,13 @@ serve(async (request) => {
     return badRequest('Invalid request method.');
   }
 
+  // Load requests require a session token issued by the join endpoint.
   const token = getBearerToken(request);
   if (!token) {
     return unauthorized('Missing session token.');
   }
 
+  // Hash before lookup so raw tokens never touch the database.
   const token_hash = await hashToken(token);
 
   const { data: session, error: sessionError } = await supabase
@@ -51,6 +55,7 @@ serve(async (request) => {
     return unauthorized('Invalid session token.');
   }
 
+  // Reject expired sessions to prevent stale client syncs.
   const expiresAt = new Date(session.expires_at);
   if (!Number.isNaN(expiresAt.getTime()) && expiresAt < new Date()) {
     return unauthorized('Session token expired.');
@@ -61,11 +66,13 @@ serve(async (request) => {
     return parsedQuery.response;
   }
 
+  // Base progress query scoped to the authenticated student.
   const query = supabase
     .from('progress')
     .select('activity_id, state, updated_at')
     .eq('student_id', session.student_id);
 
+  // Optional incremental sync: only return rows newer than the provided timestamp.
   if (parsedQuery.data.since) {
     query.gt('updated_at', parsedQuery.data.since);
   }
