@@ -55,5 +55,12 @@ SERVER_SALT="edge-test-salt-local" \
 SUPABASE_URL="${HOST_API_URL}" \
 SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY}" \
 SUPABASE_FUNCTIONS_URL="${FUNCTIONS_URL}" \
-deno test --trace-leaks supabase/functions/tests/edge-functions.test.ts \
+deno test --trace-leaks --parallel supabase/functions/tests/unit \
+  --allow-env --allow-net --allow-read
+
+SERVER_SALT="edge-test-salt-local" \
+SUPABASE_URL="${HOST_API_URL}" \
+SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY}" \
+SUPABASE_FUNCTIONS_URL="${FUNCTIONS_URL}" \
+DENO_JOBS=1 deno test --trace-leaks supabase/functions/tests/integration \
   --allow-env --allow-net --allow-read

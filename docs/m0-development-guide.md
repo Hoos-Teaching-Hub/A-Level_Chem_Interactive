@@ -37,7 +37,8 @@ Use this checklist to confirm the M0 milestone is ready:
 
 ### Edge function tests
 
-- [`supabase/functions/tests/edge-functions.test.ts`](../supabase/functions/tests/edge-functions.test.ts) — edge function behavior and contract checks.
+- [`supabase/functions/tests/unit/`](../supabase/functions/tests/unit/) — fast, pure unit checks for shared helpers.
+- [`supabase/functions/tests/integration/`](../supabase/functions/tests/integration/) — local Supabase stack integration checks for edge functions.
 
 ## Documentation expectations
 

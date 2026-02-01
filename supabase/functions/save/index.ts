@@ -84,11 +84,27 @@ serve(async (request) => {
   const { data: progressRows, error: progressError } = await supabase
     .from('progress')
     .upsert(records, { onConflict: 'student_id,activity_id' })
-    .select('activity_id, updated_at');
+    .select('activity_id, state, updated_at');
 
   if (progressError) {
     return internalServerError('Failed to save progress.');
   }
+
+  // Echo what we attempted to write so callers still get state even if RLS
+  // prevents returning rows from `select()` (it can return an empty array).
+  const echoRecords = records.map((r) => ({
+    activity_id: r.activity_id,
+    state: r.state,
+    updated_at: r.updated_at,
+  }));
+
+  // Prefer DB-returned rows so response reflects any server-side transforms.
+  // However, RLS can cause `select()` to return an empty array even when the upsert succeeds.
+  // In that case, fall back to echoing the payload we attempted to write.
+  const progress =
+    progressRows && progressRows.length > 0
+      ? progressRows
+      : echoRecords;
 
   // Update activity timestamps for both the session and the student profile.
   const { error: sessionUpdateError } = await supabase
@@ -112,6 +128,6 @@ serve(async (request) => {
   // Return updated timestamps so clients can store a consistent sync marker.
   return jsonResponse({
     updated_at: now,
-    progress: progressRows ?? [],
+    progress,
   });
 });
