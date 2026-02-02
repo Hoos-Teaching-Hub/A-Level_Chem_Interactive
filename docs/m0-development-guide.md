@@ -39,6 +39,7 @@ Use this checklist to confirm the M0 milestone is ready:
 
 - [`supabase/functions/tests/unit/`](../supabase/functions/tests/unit/) — fast, pure unit checks for shared helpers.
 - [`supabase/functions/tests/integration/`](../supabase/functions/tests/integration/) — local Supabase stack integration checks for edge functions.
+- [`supabase/functions/tests/integration/access-control.test.ts`](../supabase/functions/tests/integration/access-control.test.ts) — RLS/role-gating coverage for student/teacher isolation.
 - [`supabase/functions/tests/testkit/sample-progress.ts`](../supabase/functions/tests/testkit/sample-progress.ts) — deterministic sample data set used by teacher-report aggregation tests.
 
 ## Documentation expectations

@@ -6,3 +6,4 @@ import "./integration/join.test.ts";
 import "./integration/save-load.test.ts";
 import "./integration/teacher-report.test.ts";
 import "./integration/isolation.test.ts";
+import "./integration/access-control.test.ts";
