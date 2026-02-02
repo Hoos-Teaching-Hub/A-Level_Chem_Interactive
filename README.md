@@ -51,6 +51,16 @@ Then open:
 Legacy organic map assets remain available at `/legacy/` (for example,
 `http://localhost:5173/legacy/organic-map.html`).
 
+## Tests
+
+Run the required structure and edge checks in order:
+
+```sh
+node tests/paths.test.js
+node tests/structure.test.js
+bash scripts/test-edge.sh
+```
+
 ## Environment configuration
 
 Set the API base URL for the frontend fetch helpers:

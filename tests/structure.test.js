@@ -75,6 +75,17 @@ assertIncludesAll(
 const appContents = readText('src/app/App.tsx');
 assertIncludesAll(appContents, ['to="/student"', 'to="/teacher"'], 'App layout');
 
+// Session persistence should exist in the client and be wired into route gating.
+const roleStoreContents = readText('src/app/roleStore.ts');
+assertIncludesAll(
+  roleStoreContents,
+  ['sessionStorage', 'getStoredRole', 'setStoredRole', 'useRole'],
+  'Role storage module'
+);
+
+const roleGuardContents = readText('src/app/RoleGuard.tsx');
+assertIncludesAll(roleGuardContents, ['useRole', 'blockedRoles'], 'Role guard wiring');
+
 // Legacy index should preserve branding and link to the organic map page.
 const legacyIndex = readText('public/legacy/index.html');
 
