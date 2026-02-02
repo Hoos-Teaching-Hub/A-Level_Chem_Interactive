@@ -125,7 +125,7 @@ serve(async (request) => {
   // Pull progress rows scoped to the class via the students join.
   const { data: progressRows, error: progressError } = await supabase
     .from('progress')
-    .select('activity_id, updated_at, student_id, students!inner(class_code)')
+    .select('activity_id, updated_at, student_id, state, students!inner(class_code)')
     .eq('students.class_code', class_code);
 
   if (progressError) {
@@ -138,6 +138,9 @@ serve(async (request) => {
     { activity_id: string; total: number; updated_at_buckets: Record<string, number> }
   >();
   const studentCompletionCounts = new Map<string, number>();
+  const topicSummary = new Map<string, { topic: string; total: number; progress_sum: number }>();
+  let coverageSum = 0;
+  let coverageCount = 0;
 
   for (const row of progressRows ?? []) {
     const activityId = row.activity_id as string;
@@ -157,6 +160,27 @@ serve(async (request) => {
       studentId,
       (studentCompletionCounts.get(studentId) ?? 0) + 1,
     );
+
+    // Coverage + weak-topic aggregation is derived from the stored progress state
+    // so teachers can see where students struggle without exposing identities.
+    const state = (row.state ?? {}) as Record<string, unknown>;
+    const progressValue = typeof state.progress === 'number' ? state.progress : 0;
+    const topicValue =
+      typeof state.topic === 'string' && state.topic.trim().length > 0
+        ? state.topic.trim()
+        : 'unknown';
+
+    coverageSum += progressValue;
+    coverageCount += 1;
+
+    const topicEntry = topicSummary.get(topicValue) ?? {
+      topic: topicValue,
+      total: 0,
+      progress_sum: 0,
+    };
+    topicEntry.total += 1;
+    topicEntry.progress_sum += progressValue;
+    topicSummary.set(topicValue, topicEntry);
   }
 
   // Top 10 students by completed activities (ties preserved by stable sort order).
@@ -170,15 +194,30 @@ serve(async (request) => {
     .sort((a, b) => b.completed - a.completed)
     .slice(0, 10);
 
+  const coverage = coverageCount > 0 ? coverageSum / coverageCount : 0;
+  const weak_topics = Array.from(topicSummary.values())
+    .map((topic) => ({
+      topic: topic.topic,
+      average_progress: Number((topic.progress_sum / topic.total).toFixed(3)),
+      total: topic.total,
+    }))
+    .sort((a, b) =>
+      a.average_progress === b.average_progress
+        ? a.topic.localeCompare(b.topic)
+        : a.average_progress - b.average_progress,
+    );
+
   return jsonResponse({
     class_code,
     totals: {
       students: totalStudents ?? 0,
       active_last_24h: activeStudents ?? 0,
+      coverage,
     },
     activities: Array.from(activitySummary.values()).sort((a, b) =>
       a.activity_id.localeCompare(b.activity_id),
     ),
     leaderboard,
+    weak_topics,
   });
 });

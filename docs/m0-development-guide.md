@@ -22,7 +22,7 @@ Use this checklist to confirm the M0 milestone is ready:
 
 - [ ] **Auth flow**: Code-based join/login (class code + student code + display name) works end-to-end with server-side hashing.
 - [ ] **Row-level security (RLS)**: Students can only read/write their own progress records.
-- [ ] **Teacher report**: Teacher view shows aggregated coverage and weak topics without exposing student identities.
+- [ ] **Teacher report**: Teacher view shows aggregated coverage (average progress across activity rows) and weak topics (lowest average progress by topic from `progress.state`) without exposing student identities.
 - [ ] **Role gating**: Student accounts cannot access teacher-only pages or endpoints. The current
       frontend uses a session storage flag (`chem.role`) to block teacher routes/UI until backend
       auth is in place.
@@ -39,6 +39,7 @@ Use this checklist to confirm the M0 milestone is ready:
 
 - [`supabase/functions/tests/unit/`](../supabase/functions/tests/unit/) — fast, pure unit checks for shared helpers.
 - [`supabase/functions/tests/integration/`](../supabase/functions/tests/integration/) — local Supabase stack integration checks for edge functions.
+- [`supabase/functions/tests/testkit/sample-progress.ts`](../supabase/functions/tests/testkit/sample-progress.ts) — deterministic sample data set used by teacher-report aggregation tests.
 
 ## Documentation expectations
 

@@ -5,6 +5,7 @@ import { makeActivityId, makeClassCode, makeRateLimitIp, makeStudentCode, makeTe
 import { cleanupTestData } from "../testkit/cleanup.ts";
 import { createClass, joinSession, saveProgress, teacherReport } from "../testkit/fixtures.ts";
 import { fetchDiscard } from "../testkit/http.ts";
+import { buildProgressSamples } from "../testkit/sample-progress.ts";
 
 const cfg = loadTestConfig();
 const supabase = createServiceClient(cfg);
@@ -80,6 +81,69 @@ Deno.test("GET /teacher/report returns aggregates with valid teacher code", asyn
 
     assertEquals(leaderboardByName.get(firstDisplayName), 1);
     assertEquals(leaderboardByName.get(secondDisplayName), 1);
+  } finally {
+    await cleanupTestData({ supabase, classCode, studentIds, rateLimitIp: firstRateLimitIp });
+    await supabase.from("rate_limits").delete().eq("ip", secondRateLimitIp);
+  }
+});
+
+Deno.test("GET /teacher/report aggregates coverage and weak topics", async () => {
+  const classCode = makeClassCode();
+  const teacherCode = makeTeacherCode();
+  const teacherCodeHash = await hashCode(teacherCode, classCode);
+  const firstStudentCode = makeStudentCode();
+  const secondStudentCode = makeStudentCode();
+  const firstRateLimitIp = makeRateLimitIp(110);
+  const secondRateLimitIp = makeRateLimitIp(111);
+  const studentIds: string[] = [];
+  const progressRows = buildProgressSamples();
+
+  try {
+    await createClass(supabase, classCode, teacherCodeHash);
+
+    const firstJoin = await joinSession({
+      functionsBaseUrl: cfg.functionsBaseUrl,
+      classCode,
+      studentCode: firstStudentCode,
+      displayName: "Coverage Student One",
+      rateLimitIp: firstRateLimitIp,
+    });
+
+    const secondJoin = await joinSession({
+      functionsBaseUrl: cfg.functionsBaseUrl,
+      classCode,
+      studentCode: secondStudentCode,
+      displayName: "Coverage Student Two",
+      rateLimitIp: secondRateLimitIp,
+    });
+
+    studentIds.push(firstJoin.student_profile.id, secondJoin.student_profile.id);
+
+    // Insert deterministic progress rows directly so aggregation math is stable.
+    const insertRows = [
+      { ...progressRows[0], student_id: firstJoin.student_profile.id },
+      { ...progressRows[1], student_id: firstJoin.student_profile.id },
+      { ...progressRows[2], student_id: secondJoin.student_profile.id },
+      { ...progressRows[3], student_id: secondJoin.student_profile.id },
+    ];
+
+    const { error: progressError } = await supabase.from("progress").insert(insertRows);
+    if (progressError) {
+      throw new Error(`Failed to seed progress rows: ${progressError.message}`);
+    }
+
+    const report = await teacherReport({
+      functionsBaseUrl: cfg.functionsBaseUrl,
+      classCode,
+      teacherCode,
+    });
+
+    assertEquals(report.totals?.students, 2);
+    assertEquals(report.totals?.coverage, 0.5);
+    assertEquals(report.weak_topics, [
+      { topic: "Equilibria", average_progress: 0.4, total: 2 },
+      { topic: "Kinetics", average_progress: 0.6, total: 2 },
+    ]);
   } finally {
     await cleanupTestData({ supabase, classCode, studentIds, rateLimitIp: firstRateLimitIp });
     await supabase.from("rate_limits").delete().eq("ip", secondRateLimitIp);

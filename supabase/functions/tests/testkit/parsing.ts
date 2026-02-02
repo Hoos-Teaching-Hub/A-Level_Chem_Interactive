@@ -98,9 +98,10 @@ export function parseErrorPayload(x: unknown): ErrorPayload {
 }
 
 export type TeacherReportResponse = {
-  totals?: { students?: number };
+  totals?: { students?: number; coverage?: number };
   activities?: Array<{ activity_id: string; total: number }>;
   leaderboard?: Array<{ display_name: string; completed: number }>;
+  weak_topics?: Array<{ topic: string; average_progress: number; total: number }>;
 };
 
 export function parseTeacherReportResponse(x: unknown): TeacherReportResponse {
@@ -108,7 +109,10 @@ export function parseTeacherReportResponse(x: unknown): TeacherReportResponse {
 
   const totalsObj = isRecord(root.totals) ? root.totals : undefined;
   const totals = totalsObj
-    ? { students: typeof totalsObj.students === "number" ? totalsObj.students : undefined }
+    ? {
+      students: typeof totalsObj.students === "number" ? totalsObj.students : undefined,
+      coverage: typeof totalsObj.coverage === "number" ? totalsObj.coverage : undefined,
+    }
     : undefined;
 
   const activitiesRaw = Array.isArray(root.activities) ? root.activities : [];
@@ -131,5 +135,20 @@ export function parseTeacherReportResponse(x: unknown): TeacherReportResponse {
     return { display_name, completed };
   });
 
-  return { totals, activities, leaderboard };
+  const weakTopicsRaw = Array.isArray(root.weak_topics) ? root.weak_topics : [];
+  const weak_topics = weakTopicsRaw.map((t, idx) => {
+    const tr = getRecord(t, `weak_topics[${idx}]`);
+    const topic = getString(tr, "topic");
+    const average_progress = tr.average_progress;
+    if (typeof average_progress !== "number") {
+      throw new Error(`Expected number at weak_topics[${idx}].average_progress`);
+    }
+    const total = tr.total;
+    if (typeof total !== "number") {
+      throw new Error(`Expected number at weak_topics[${idx}].total`);
+    }
+    return { topic, average_progress, total };
+  });
+
+  return { totals, activities, leaderboard, weak_topics };
 }
