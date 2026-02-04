@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { joinPayloadSchema } from '../validators/join';
 import { apiClient } from '../api/client';
 import { setStoredRole } from '../app/roleStore';
+import { storeJoinResponse } from '../api/session';
+import { syncProgress } from '../api/sync';
 
 type JoinPayload = z.infer<typeof joinPayloadSchema>;
 
@@ -31,10 +33,11 @@ export function JoinForm() {
       return;
     }
 
-    console.log('student.join', parsed.data);
     try {
-      await apiClient.join(parsed.data);
+      const response = await apiClient.join(parsed.data);
+      storeJoinResponse(response);
       setStoredRole('student');
+      void syncProgress('join');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to join right now.';
       setError(message);

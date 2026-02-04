@@ -19,6 +19,23 @@ Role gating uses a lightweight session storage flag (`chem.role`) that is set af
 student join or teacher login. The teacher route and teacher-only UI are blocked when the role is
 `student`, keeping the M0 access boundary explicit without adding full auth state yet.
 
+## M0 T4 — Offline-first sync (local-first progress)
+
+**What changed**
+- Frontend API helpers now call edge functions (`/join`, `/load`, `/save`, `/teacher/report`).
+- Student sessions and progress are stored locally (`chem.sessionToken`, `chem.studentProfile`,
+  `chem.progress`, `chem.lastSyncAt`).
+- Teacher code is stored in session storage (`chem.teacherCode`) after a successful report fetch.
+- Background sync runs on the student route load and when the browser comes back online.
+
+**Why**
+- Aligns with the M0 roadmap T4 requirement for local-first progress storage and background sync
+  using `updated_at` conflict resolution.
+
+**How to verify**
+- Run the M0 test suite (see below).
+- Join a class and confirm local storage keys are populated in the browser.
+
 ## Project structure (M0 frontend)
 
 ```

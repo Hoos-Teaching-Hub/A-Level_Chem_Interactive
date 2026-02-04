@@ -1,6 +1,10 @@
+import { useEffect } from 'react';
 import { JoinForm } from '../components/JoinForm';
+import { startBackgroundSync } from '../api/sync';
 
 export function Student() {
+  useEffect(() => startBackgroundSync(), []);
+
   return (
     <section className="space-y-6">
       <div>
