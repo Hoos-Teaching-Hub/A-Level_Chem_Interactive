@@ -1,7 +1,22 @@
-import { TeacherLoginForm } from '../components/TeacherLoginForm';
 import { RoleGate } from '../app/RoleGate';
+import { useState } from 'react';
+import { TeacherLoginForm } from '../components/TeacherLoginForm';
+import { getTeacherClassCode, getTeacherCode } from '../api/session';
+import { TeacherDashboard } from '../teacher/TeacherDashboard';
 
 export function Teacher() {
+  const [session, setSession] = useState(() => ({
+    classCode: getTeacherClassCode(),
+    teacherCode: getTeacherCode(),
+  }));
+
+  const handleLogin = () => {
+    setSession({
+      classCode: getTeacherClassCode(),
+      teacherCode: getTeacherCode(),
+    });
+  };
+
   return (
     <section className="space-y-6">
       <div>
@@ -19,7 +34,11 @@ export function Teacher() {
           </p>
         }
       >
-        <TeacherLoginForm />
+        {session.classCode && session.teacherCode ? (
+          <TeacherDashboard classCode={session.classCode} teacherCode={session.teacherCode} />
+        ) : (
+          <TeacherLoginForm onLogin={handleLogin} />
+        )}
       </RoleGate>
     </section>
   );

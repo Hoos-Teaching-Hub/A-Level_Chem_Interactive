@@ -67,6 +67,8 @@ Then open:
 
 After a successful student join, the app shows the Student MVP dashboard with mock activities,
 local progress updates, and a sync status bar.
+After a successful teacher login, the app shows a dashboard with stats, leaderboard, activity
+distribution, search, and CSV export.
 
 Legacy organic map assets remain available at `/legacy/` (for example,
 `http://localhost:5173/legacy/organic-map.html`).
