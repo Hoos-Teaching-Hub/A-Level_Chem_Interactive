@@ -87,25 +87,33 @@ export const syncProgress = async (reason = 'manual'): Promise<SyncResult> => {
   return await inFlight;
 };
 
-export const startBackgroundSync = () => {
+export const startBackgroundSync = (onResult?: (result: SyncResult) => void) => {
   if (typeof window === 'undefined') {
     return () => undefined;
   }
 
+  const runSync = async (reason: string) => {
+    const result = await syncProgress(reason);
+    if (onResult) {
+      onResult(result);
+    }
+    return result;
+  };
+
   const handleOnline = () => {
-    void syncProgress('online');
+    void runSync('online');
   };
 
   const handleVisibility = () => {
     if (document.visibilityState === 'visible') {
-      void syncProgress('visible');
+      void runSync('visible');
     }
   };
 
   window.addEventListener('online', handleOnline);
   document.addEventListener('visibilitychange', handleVisibility);
 
-  void syncProgress('startup');
+  void runSync('startup');
 
   return () => {
     window.removeEventListener('online', handleOnline);

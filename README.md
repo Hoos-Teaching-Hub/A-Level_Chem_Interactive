@@ -65,6 +65,9 @@ Then open:
 - `http://localhost:5173/student` for the student join flow.
 - `http://localhost:5173/teacher` for the teacher login flow.
 
+After a successful student join, the app shows the Student MVP dashboard with mock activities,
+local progress updates, and a sync status bar.
+
 Legacy organic map assets remain available at `/legacy/` (for example,
 `http://localhost:5173/legacy/organic-map.html`).
 

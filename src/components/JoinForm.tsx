@@ -8,13 +8,17 @@ import { syncProgress } from '../api/sync';
 
 type JoinPayload = z.infer<typeof joinPayloadSchema>;
 
+type JoinFormProps = {
+  onJoin?: () => void;
+};
+
 const initialState: JoinPayload = {
   classCode: '',
   studentCode: '',
   displayName: '',
 };
 
-export function JoinForm() {
+export function JoinForm({ onJoin }: JoinFormProps) {
   const [values, setValues] = useState<JoinPayload>(initialState);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +42,7 @@ export function JoinForm() {
       storeJoinResponse(response);
       setStoredRole('student');
       void syncProgress('join');
+      onJoin?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to join right now.';
       setError(message);

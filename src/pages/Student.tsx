@@ -1,9 +1,24 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { JoinForm } from '../components/JoinForm';
-import { startBackgroundSync } from '../api/sync';
+import { getSessionToken, getStudentProfile } from '../api/session';
+import { StudentDashboard } from '../student/StudentDashboard';
 
 export function Student() {
-  useEffect(() => startBackgroundSync(), []);
+  const [session, setSession] = useState(() => ({
+    token: getSessionToken(),
+    profile: getStudentProfile(),
+  }));
+
+  const handleJoin = () => {
+    setSession({
+      token: getSessionToken(),
+      profile: getStudentProfile(),
+    });
+  };
+
+  if (session.token && session.profile) {
+    return <StudentDashboard profile={session.profile} />;
+  }
 
   return (
     <section className="space-y-6">
@@ -13,7 +28,7 @@ export function Student() {
           Enter your class code, student code, and display name to join the session.
         </p>
       </div>
-      <JoinForm />
+      <JoinForm onJoin={handleJoin} />
     </section>
   );
 }
