@@ -12,6 +12,7 @@ export type StudentProfile = {
 const SESSION_TOKEN_KEY = 'chem.sessionToken';
 const STUDENT_PROFILE_KEY = 'chem.studentProfile';
 const TEACHER_CODE_KEY = 'chem.teacherCode';
+const TEACHER_CLASS_CODE_KEY = 'chem.teacherClassCode';
 
 const getStorage = (kind: 'local' | 'session'): Storage | null => {
   if (typeof window === 'undefined') {
@@ -115,6 +116,17 @@ export const setTeacherCode = (teacherCode: string) => {
 
 export const clearTeacherCode = () => {
   removeKey(TEACHER_CODE_KEY, 'session');
+};
+
+export const getTeacherClassCode = (): string | null =>
+  readString(TEACHER_CLASS_CODE_KEY, 'session');
+
+export const setTeacherClassCode = (classCode: string) => {
+  writeString(TEACHER_CLASS_CODE_KEY, classCode, 'session');
+};
+
+export const clearTeacherClassCode = () => {
+  removeKey(TEACHER_CLASS_CODE_KEY, 'session');
 };
 
 export const storeJoinResponse = (response: JoinResponse): StudentProfile => {

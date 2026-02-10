@@ -24,7 +24,7 @@ assertIncludesAll(
 const sessionContents = readText('src/api/session.ts');
 assertIncludesAll(
   sessionContents,
-  ['chem.sessionToken', 'chem.studentProfile', 'chem.teacherCode'],
+  ['chem.sessionToken', 'chem.studentProfile', 'chem.teacherCode', 'chem.teacherClassCode'],
   'session storage'
 );
 
