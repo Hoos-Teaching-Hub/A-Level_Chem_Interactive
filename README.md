@@ -73,6 +73,11 @@ distribution, search, and CSV export.
 Legacy organic map assets remain available at `/legacy/` (for example,
 `http://localhost:5173/legacy/organic-map.html`).
 
+## Deployment
+
+See `docs/deployment.md` for local setup, GitHub Pages test deployment, and
+production deployment guidance.
+
 ## Tests
 
 Run the required structure and edge checks in order:
