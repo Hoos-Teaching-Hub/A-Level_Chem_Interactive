@@ -182,16 +182,16 @@ const nodeMetadataById = {
         syllabusSections: [16, 21]
     },
     Alc2: {
-        level: 'A2',
+        level: 'AS',
         topic: 'Hydroxy compounds',
         examTips: ['Secondary alcohol oxidation gives ketones under reflux conditions.'],
-        syllabusSections: [32, 36]
+        syllabusSections: [16, 21]
     },
     Alc3: {
-        level: 'A2',
+        level: 'AS',
         topic: 'Hydroxy compounds',
         examTips: ['Tertiary alcohols resist oxidation under standard dichromate conditions.'],
-        syllabusSections: [32]
+        syllabusSections: [16]
     },
     Ald: {
         level: 'AS',
