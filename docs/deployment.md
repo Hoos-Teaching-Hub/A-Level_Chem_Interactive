@@ -30,6 +30,9 @@ to the `M0` branch or via manual dispatch.
 Important details:
 - The workflow sets `VITE_BASE_PATH=/A-Level_Chem_Interactive/` so static assets
   load correctly under the repo path on Pages.
+- The build can read optional Actions secrets:
+  - `VITE_API_BASE_URL` (full functions URL, e.g. `https://<ref>.supabase.co/functions/v1`)
+  - `VITE_SUPABASE_URL` (host URL, app appends `/functions/v1`)
 - The app router uses `basename: import.meta.env.BASE_URL`, so client-side
   routes also resolve correctly under the repo subpath.
 - `vite.config.ts` reads `VITE_BASE_PATH` via Vite `loadEnv` (instead of
