@@ -30,6 +30,8 @@ to the `M0` branch or via manual dispatch.
 Important details:
 - The workflow sets `VITE_BASE_PATH=/A-Level_Chem_Interactive/` so static assets
   load correctly under the repo path on Pages.
+- `vite.config.ts` reads `VITE_BASE_PATH` via Vite `loadEnv` (instead of
+  `process.env`) so CI TypeScript builds do not require Node global typings.
 - If you fork the repo, update the base path in the workflow to match your
   repository name.
 - GitHub Pages is **test-only**: it does not run the Supabase edge functions.
