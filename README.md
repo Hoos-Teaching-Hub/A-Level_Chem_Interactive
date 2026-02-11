@@ -36,6 +36,29 @@ student join or teacher login. The teacher route and teacher-only UI are blocked
 - Run the M0 test suite (see below).
 - Join a class and confirm local storage keys are populated in the browser.
 
+## M1 metadata completion — Structured metadata + fixed info blocks
+
+**What changed**
+- Legacy reaction-map nodes now include `level`, `topic`, and `examTips`.
+  - `level` may be `AS`, `A2`, or `AS/A2` when a node spans both phase section tags.
+- Legacy reaction-map links now include `conditions`, `mechanismSummary`, `quizData`, and `animationId`.
+- Nodes and links now include explicit `syllabusSections` tags (CIE 9701 section numbers).
+  - Node section tags are authored per node to keep AS/A2 separation intentional.
+- The legacy side panel includes fixed `What / How / Why / Exam tip` blocks with safe fallbacks.
+- Schema checks now enforce metadata quality across the full map:
+  - Every node must have non-fallback `topic` and at least one `examTip`.
+  - Every link must include `reagents`.
+  - Every non-structural reaction link must include valid `quizData` and `animationId`.
+  - Every node and link must include valid `syllabusSections`.
+  - M1 phase coverage targets are validated for sections `13-22` and `29-37`.
+  - No orphan nodes are allowed.
+
+**How to verify**
+- Run `node tests/m1-data-model.test.js`.
+- Run `node tests/m1-syllabus-coverage.test.js`.
+- Run `node tests/m1-chemistry-content.test.js`.
+- Open `/legacy/organic-map.html`, click a node or reaction link, and confirm all four info blocks populate.
+
 ## Project structure (M0 frontend)
 
 ```
@@ -67,6 +90,7 @@ Then open:
 
 After a successful student join, the app shows the Student MVP dashboard with mock activities,
 local progress updates, and a sync status bar.
+The activity detail panel now includes structured M1 blocks: `What`, `How`, `Why`, and `Exam tip`.
 After a successful teacher login, the app shows a dashboard with stats, leaderboard, activity
 distribution, search, and CSV export.
 
@@ -96,11 +120,23 @@ bash scripts/test-edge.sh
 
 ## Environment configuration
 
-Set the API base URL for the frontend fetch helpers:
+Configure frontend API routing for edge functions.
+
+Option A (explicit edge functions URL):
 
 ```sh
-VITE_API_BASE_URL="https://api.example.com"
+VITE_API_BASE_URL="http://127.0.0.1:54321/functions/v1"
 ```
+
+Option B (Supabase host URL; frontend appends `/functions/v1` automatically):
+
+```sh
+VITE_SUPABASE_URL="http://127.0.0.1:54321"
+```
+
+If `VITE_API_BASE_URL` is set, it takes precedence over `VITE_SUPABASE_URL`.
+For `VITE_API_BASE_URL`, either a host root (`http://127.0.0.1:54321`) or an
+explicit functions path (`http://127.0.0.1:54321/functions/v1`) is supported.
 
 ## Database initialization (Supabase)
 
@@ -120,6 +156,11 @@ psql "$SUPABASE_DB_URL" -f supabase/seed/seed-demo.sql
 The plaintext demo class/teacher/student codes are written to `supabase/seed/demo-codes.txt`
 and should stay local (not committed). The database only receives SHA-256 hashes derived from
 `<code>:<class_code>:<server_salt>`.
+
+The same output file also includes one deterministic manual test set:
+`manual_test_class_code`, `manual_test_teacher_code`, and `manual_test_student_1_code`.
+Override these defaults with `MANUAL_TEST_CLASS_CODE`, `MANUAL_TEST_TEACHER_CODE`,
+`MANUAL_TEST_STUDENT_CODE`, and `MANUAL_TEST_STUDENT_NAME` if needed.
 
 ## Supabase Edge Functions (local)
 

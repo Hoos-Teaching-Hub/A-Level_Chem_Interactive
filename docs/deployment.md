@@ -48,7 +48,9 @@ Recommended flow:
    - Build locally or in CI: `npm run build`.
    - Deploy the `dist` directory to a static host (Netlify, Vercel, Cloudflare,
      or a static bucket + CDN).
-   - Set `VITE_API_BASE_URL` to your production functions URL.
+   - Set one of:
+     - `VITE_API_BASE_URL` to your production functions URL (`.../functions/v1`).
+     - `VITE_SUPABASE_URL` to your Supabase host URL (the app will append `/functions/v1`).
 
 2. **Supabase**
    - Provision a Supabase project.
@@ -64,6 +66,6 @@ Recommended flow:
      `/student` and `/teacher` work on refresh.
 
 4. **Pre-launch checklist**
-   - Confirm `VITE_API_BASE_URL` is set to the production functions URL.
+   - Confirm frontend API env is set (`VITE_API_BASE_URL` or `VITE_SUPABASE_URL`).
    - Verify `SERVER_SALT` is set and never exposed to the client.
    - Run the full test suite (see README).

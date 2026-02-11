@@ -2,10 +2,49 @@ import { z } from 'zod';
 import { joinPayloadSchema } from '../validators/join';
 import { teacherLoginSchema } from '../validators/teacher';
 
-// Base URL for edge function requests. When unset we fall back to same-origin,
-// which lets local dev and static preview environments call relative endpoints
-// without extra configuration.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const EDGE_FUNCTIONS_PREFIX = '/functions/v1';
+const rawApiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').trim();
+const rawSupabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
+
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
+
+const withFunctionsPrefix = (baseUrl: string): string => {
+  const normalized = trimTrailingSlash(baseUrl);
+  if (!normalized) {
+    return normalized;
+  }
+  return normalized.endsWith(EDGE_FUNCTIONS_PREFIX)
+    ? normalized
+    : `${normalized}${EDGE_FUNCTIONS_PREFIX}`;
+};
+
+const resolveApiBaseUrl = (): string => {
+  if (rawApiBaseUrl) {
+    return trimTrailingSlash(rawApiBaseUrl);
+  }
+  if (rawSupabaseUrl) {
+    return withFunctionsPrefix(rawSupabaseUrl);
+  }
+  return '';
+};
+
+// Base URL for edge function requests. We first respect VITE_API_BASE_URL,
+// then fall back to VITE_SUPABASE_URL + /functions/v1 for local Supabase setups.
+const API_BASE_URL = resolveApiBaseUrl();
+
+const canRetryWithFunctionsPrefix = (() => {
+  if (!API_BASE_URL || API_BASE_URL.endsWith(EDGE_FUNCTIONS_PREFIX)) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(API_BASE_URL);
+    return parsed.pathname === '' || parsed.pathname === '/';
+  } catch {
+    // Relative base URLs are treated as intentional and are not rewritten.
+    return false;
+  }
+})();
 
 type ApiErrorPayload = {
   error?: {
@@ -16,11 +55,11 @@ type ApiErrorPayload = {
 
 type JsonValue = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
 
-const buildUrl = (path: string) => {
-  if (!API_BASE_URL) {
+const buildUrl = (path: string, baseUrl: string = API_BASE_URL) => {
+  if (!baseUrl) {
     return path;
   }
-  const base = API_BASE_URL.replace(/\/$/, '');
+  const base = trimTrailingSlash(baseUrl);
   const normalized = path.startsWith('/') ? path : `/${path}`;
   return `${base}${normalized}`;
 };
@@ -34,9 +73,22 @@ const mergeHeaders = (base: HeadersInit | undefined, extra: HeadersInit) => {
   return merged;
 };
 
+const isJsonContentType = (response: Response): boolean => {
+  const contentType = response.headers.get('content-type') ?? '';
+  return contentType.toLowerCase().includes('application/json');
+};
+
+const looksLikeJson = (raw: string): boolean => {
+  const trimmed = raw.trim();
+  return trimmed.startsWith('{') || trimmed.startsWith('[');
+};
+
 const parseJsonBody = async (response: Response): Promise<JsonValue | null> => {
   const raw = await response.text();
   if (!raw) {
+    return null;
+  }
+  if (!isJsonContentType(response) && !looksLikeJson(raw)) {
     return null;
   }
   try {
@@ -46,28 +98,49 @@ const parseJsonBody = async (response: Response): Promise<JsonValue | null> => {
   }
 };
 
-const handleJsonResponse = async <TResponse>(response: Response): Promise<TResponse> => {
+const endpointNotFoundMessage = (path: string): string => {
+  const prefix = path.startsWith('/join') ? 'Join endpoint' : 'API endpoint';
+  return `${prefix} was not found. Check VITE_API_BASE_URL points to your functions URL (for example http://127.0.0.1:54321/functions/v1).`;
+};
+
+const handleJsonResponse = async <TResponse>(
+  response: Response,
+  path: string,
+): Promise<TResponse> => {
   const payload = await parseJsonBody(response);
   if (!response.ok) {
+    const payloadMessage = (payload as ApiErrorPayload | null)?.error?.message;
     const message =
-      (payload as ApiErrorPayload | null)?.error?.message ??
-      response.statusText ??
+      payloadMessage ??
+      (response.status === 404 ? endpointNotFoundMessage(path) : response.statusText) ??
       'Request failed.';
     throw new Error(message);
   }
+  if (payload === null) {
+    throw new Error(`Invalid JSON response from ${path}.`);
+  }
   return payload as TResponse;
 };
+
+const shouldRetryWithFunctionsPrefix = (response: Response): boolean =>
+  canRetryWithFunctionsPrefix && response.status === 404 && !isJsonContentType(response);
 
 export async function getJson<TResponse>(
   path: string,
   options?: Omit<RequestInit, 'method'>,
 ): Promise<TResponse> {
-  const response = await fetch(buildUrl(path), {
+  const requestInit: RequestInit = {
     ...options,
     method: 'GET',
     headers: mergeHeaders(options?.headers, { Accept: 'application/json' }),
-  });
-  return await handleJsonResponse<TResponse>(response);
+  };
+
+  let response = await fetch(buildUrl(path), requestInit);
+  if (shouldRetryWithFunctionsPrefix(response)) {
+    response = await fetch(buildUrl(path, withFunctionsPrefix(API_BASE_URL)), requestInit);
+  }
+
+  return await handleJsonResponse<TResponse>(response, path);
 }
 
 export async function postJson<TResponse, TBody>(
@@ -75,7 +148,7 @@ export async function postJson<TResponse, TBody>(
   body: TBody,
   options?: Omit<RequestInit, 'method' | 'body'>,
 ): Promise<TResponse> {
-  const response = await fetch(buildUrl(path), {
+  const requestInit: RequestInit = {
     ...options,
     method: 'POST',
     body: JSON.stringify(body),
@@ -83,8 +156,14 @@ export async function postJson<TResponse, TBody>(
       Accept: 'application/json',
       'Content-Type': 'application/json',
     }),
-  });
-  return await handleJsonResponse<TResponse>(response);
+  };
+
+  let response = await fetch(buildUrl(path), requestInit);
+  if (shouldRetryWithFunctionsPrefix(response)) {
+    response = await fetch(buildUrl(path, withFunctionsPrefix(API_BASE_URL)), requestInit);
+  }
+
+  return await handleJsonResponse<TResponse>(response, path);
 }
 
 export type JoinPayload = z.infer<typeof joinPayloadSchema>;
