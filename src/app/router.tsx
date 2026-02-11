@@ -21,4 +21,6 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       },
     ],
   },
-]);
+], {
+  basename: import.meta.env.BASE_URL,
+});

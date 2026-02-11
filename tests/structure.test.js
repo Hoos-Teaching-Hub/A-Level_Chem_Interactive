@@ -55,6 +55,11 @@ assert.ok(
 // Route definitions must include the student/teacher entry points.
 const routerContents = readText('src/app/router.tsx');
 assertIncludesAll(routerContents, ["path: 'student'", "path: 'teacher'"], 'router');
+assertIncludesAll(
+  routerContents,
+  ['basename: import.meta.env.BASE_URL'],
+  'router basename for subpath deploys'
+);
 
 const studentPageContents = readText('src/pages/Student.tsx');
 const teacherPageContents = readText('src/pages/Teacher.tsx');
