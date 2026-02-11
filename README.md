@@ -179,6 +179,8 @@ Override these defaults with `MANUAL_TEST_CLASS_CODE`, `MANUAL_TEST_TEACHER_CODE
 
 Start the edge functions with the required environment variables. The service role key is
 **server-only**: it must stay in the edge function environment and never be exposed in the frontend.
+This project uses custom code/session auth, so function JWT verification is disabled in
+`supabase/config.toml` for `join`, `load`, `save`, and `teacher`.
 
 ```sh
 SUPABASE_URL="http://localhost:54321" \
@@ -196,7 +198,6 @@ Session-based endpoints require a bearer token. The `since` example is shown on 
 # POST /join
 curl -X POST "${SUPABASE_URL}/functions/v1/join" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${SESSION_TOKEN}" \
   -d '{
     "class_code": "CHEM101",
     "student_code": "S-001",

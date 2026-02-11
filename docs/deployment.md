@@ -63,6 +63,9 @@ Recommended flow:
    - Provision a Supabase project.
    - Apply migrations from `supabase/migrations/`.
    - Deploy edge functions from `supabase/functions/`.
+   - Keep function JWT verification disabled for `join`, `load`, `save`, and
+     `teacher` (configured in `supabase/config.toml`) because this app uses
+     code/session auth instead of Supabase Auth JWT tokens.
    - Set required environment variables:
      - `SUPABASE_URL`
      - `SUPABASE_SERVICE_ROLE_KEY` (server-only)
