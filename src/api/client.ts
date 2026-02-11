@@ -32,6 +32,9 @@ const resolveApiBaseUrl = (): string => {
 // then fall back to VITE_SUPABASE_URL + /functions/v1 for local Supabase setups.
 const API_BASE_URL = resolveApiBaseUrl();
 
+const missingApiBaseUrlMessage =
+  'Frontend API base URL is missing. Set VITE_API_BASE_URL or VITE_SUPABASE_URL in .env.local and restart the dev server.';
+
 const canRetryWithFunctionsPrefix = (() => {
   if (!API_BASE_URL || API_BASE_URL.endsWith(EDGE_FUNCTIONS_PREFIX)) {
     return false;
@@ -100,7 +103,30 @@ const parseJsonBody = async (response: Response): Promise<JsonValue | null> => {
 
 const endpointNotFoundMessage = (path: string): string => {
   const prefix = path.startsWith('/join') ? 'Join endpoint' : 'API endpoint';
-  return `${prefix} was not found. Check VITE_API_BASE_URL points to your functions URL (for example http://127.0.0.1:54321/functions/v1).`;
+  return `${prefix} was not found. Check VITE_API_BASE_URL (or VITE_SUPABASE_URL) points to your functions URL (for example http://127.0.0.1:54321/functions/v1).`;
+};
+
+const assertApiBaseUrlConfigured = (): void => {
+  if (!API_BASE_URL) {
+    throw new Error(missingApiBaseUrlMessage);
+  }
+};
+
+const fetchJsonWithConnectivityGuidance = async (
+  url: string,
+  requestInit: RequestInit,
+): Promise<Response> => {
+  try {
+    return await fetch(url, requestInit);
+  } catch (error) {
+    // Browsers report connection-refused/cannot-connect as a TypeError from fetch.
+    if (error instanceof TypeError) {
+      throw new Error(
+        `Could not reach the API server at ${url}. Ensure Supabase is running and the functions endpoint is reachable.`,
+      );
+    }
+    throw error;
+  }
 };
 
 const handleJsonResponse = async <TResponse>(
@@ -123,21 +149,28 @@ const handleJsonResponse = async <TResponse>(
 };
 
 const shouldRetryWithFunctionsPrefix = (response: Response): boolean =>
-  canRetryWithFunctionsPrefix && response.status === 404 && !isJsonContentType(response);
+  // Some gateways return JSON for missing routes; retry any 404 once when the
+  // configured base URL is a host root that can safely receive /functions/v1.
+  canRetryWithFunctionsPrefix && response.status === 404;
 
 export async function getJson<TResponse>(
   path: string,
   options?: Omit<RequestInit, 'method'>,
 ): Promise<TResponse> {
+  assertApiBaseUrlConfigured();
+
   const requestInit: RequestInit = {
     ...options,
     method: 'GET',
     headers: mergeHeaders(options?.headers, { Accept: 'application/json' }),
   };
 
-  let response = await fetch(buildUrl(path), requestInit);
+  let response = await fetchJsonWithConnectivityGuidance(buildUrl(path), requestInit);
   if (shouldRetryWithFunctionsPrefix(response)) {
-    response = await fetch(buildUrl(path, withFunctionsPrefix(API_BASE_URL)), requestInit);
+    response = await fetchJsonWithConnectivityGuidance(
+      buildUrl(path, withFunctionsPrefix(API_BASE_URL)),
+      requestInit,
+    );
   }
 
   return await handleJsonResponse<TResponse>(response, path);
@@ -148,6 +181,8 @@ export async function postJson<TResponse, TBody>(
   body: TBody,
   options?: Omit<RequestInit, 'method' | 'body'>,
 ): Promise<TResponse> {
+  assertApiBaseUrlConfigured();
+
   const requestInit: RequestInit = {
     ...options,
     method: 'POST',
@@ -158,9 +193,12 @@ export async function postJson<TResponse, TBody>(
     }),
   };
 
-  let response = await fetch(buildUrl(path), requestInit);
+  let response = await fetchJsonWithConnectivityGuidance(buildUrl(path), requestInit);
   if (shouldRetryWithFunctionsPrefix(response)) {
-    response = await fetch(buildUrl(path, withFunctionsPrefix(API_BASE_URL)), requestInit);
+    response = await fetchJsonWithConnectivityGuidance(
+      buildUrl(path, withFunctionsPrefix(API_BASE_URL)),
+      requestInit,
+    );
   }
 
   return await handleJsonResponse<TResponse>(response, path);

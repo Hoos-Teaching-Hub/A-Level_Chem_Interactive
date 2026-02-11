@@ -121,6 +121,14 @@ bash scripts/test-edge.sh
 ## Environment configuration
 
 Configure frontend API routing for edge functions.
+Vite only exposes variables prefixed with `VITE_`, and local development should
+use `.env.local` (or `.env.development.local`).
+
+Example `.env.local`:
+
+```sh
+VITE_SUPABASE_URL="http://127.0.0.1:54321"
+```
 
 Option A (explicit edge functions URL):
 
@@ -137,6 +145,11 @@ VITE_SUPABASE_URL="http://127.0.0.1:54321"
 If `VITE_API_BASE_URL` is set, it takes precedence over `VITE_SUPABASE_URL`.
 For `VITE_API_BASE_URL`, either a host root (`http://127.0.0.1:54321`) or an
 explicit functions path (`http://127.0.0.1:54321/functions/v1`) is supported.
+When a host root is used, the client retries 404 responses once with
+`/functions/v1` appended so local Supabase route-miss JSON responses still
+resolve correctly.
+If neither `VITE_API_BASE_URL` nor `VITE_SUPABASE_URL` is configured, the app
+fails fast with a setup error instead of silently calling a missing relative endpoint.
 
 ## Database initialization (Supabase)
 
