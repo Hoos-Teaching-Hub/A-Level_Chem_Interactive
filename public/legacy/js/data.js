@@ -107,8 +107,8 @@ const baseLinks = [
 
         // Oxidation
         { source: 'Alc1', target: 'Ald', label: 'Oxidation', reagents: 'K₂Cr₂O₇/H⁺ (Distil)', type: 'Partial Oxidation' },
-        { source: 'Ald', target: 'Carb', label: 'Oxidation', reagents: 'K₂Cr₂O₂/H⁺ (Reflux)', type: 'Full Oxidation' },
-        { source: 'Ald', target: 'Carb', label: 'Aldehyde Tests', reagents: 'Tollens/Fehling (Warm)', type: 'Oxidation (Test)' },
+        { source: 'Ald', target: 'Carb', label: 'Oxidation', reagents: 'K₂Cr₂O₇/H⁺ (Reflux)', type: 'Full Oxidation' },
+        { source: 'Ald', target: 'Carboxylate', label: 'Aldehyde Tests', reagents: 'Tollens/Fehling (Warm, alkaline)', type: 'Oxidation (Test)' },
         { source: 'Alc1', target: 'Carb', label: 'Oxidation', reagents: 'Excess K₂Cr₂O₇/H⁺ (Reflux)', type: 'Full Oxidation' },
         { source: 'Alc2', target: 'Ket', label: 'Oxidation', reagents: 'K₂Cr₂O₇/H⁺ (Reflux)', type: 'Oxidation' },
         { source: 'Alc3', target: 'NoRxn', label: 'No Reaction', reagents: 'Resistant to oxidation', type: 'N/A' },
@@ -366,6 +366,30 @@ const linkMetadataByKey = {
         },
         animationId: 'alkene-hydration'
     },
+    'Alkene|Ket|Oxidative Cleavage': {
+        mechanismSummary:
+            'Strong oxidation can cleave C=C bonds; ketone products form when substitution pattern leaves a C=C carbon without attached hydrogen, so products depend on substitution.',
+        conditions:
+            'Hot, concentrated acidified KMnO4 under reflux; product set depends on the alkene substitution pattern.',
+        quizData: {
+            prompt: 'When oxidative cleavage gives a ketone, what does that indicate about the original alkene carbon?',
+            hiddenFields: ['target'],
+            answer: 'It had no hydrogen attached'
+        },
+        animationId: 'alkene-oxidative-cleavage-ketone-pathway'
+    },
+    'Alkene|Carb|Oxidative Cleavage': {
+        mechanismSummary:
+            'Strong oxidation can cleave C=C bonds; carboxylic acids form when substitution pattern leaves a C=C carbon with at least one hydrogen, so products depend on substitution.',
+        conditions:
+            'Hot, concentrated acidified KMnO4 under reflux; product set depends on the alkene substitution pattern.',
+        quizData: {
+            prompt: 'When oxidative cleavage gives carboxylic acid, what was true of the original alkene carbon?',
+            hiddenFields: ['target'],
+            answer: 'It had at least one hydrogen attached'
+        },
+        animationId: 'alkene-oxidative-cleavage-acid-pathway'
+    },
     'Halo|AlcoholGroup|Nuc Sub': {
         mechanismSummary: 'Hydroxide nucleophile substitutes halide to produce alcohol from halogenoalkane.',
         conditions: 'Aqueous NaOH with heat, favoring substitution in hydroxy synthesis routes.',
@@ -398,13 +422,24 @@ const linkMetadataByKey = {
     },
     'Ald|Carb|Oxidation': {
         mechanismSummary: 'Aldehyde oxidizes readily to carboxylic acid in warm oxidizing conditions.',
-        conditions: 'Acidified oxidant under reflux or positive Tollens/Fehling-style oxidation test.',
+        conditions: 'Acidified K2Cr2O7/H+ under reflux.',
         quizData: {
             prompt: 'What is the oxidation product of an aldehyde?',
             hiddenFields: ['target'],
             answer: 'Carboxylic acid'
         },
         animationId: 'aldehyde-oxidation'
+    },
+    'Ald|Carboxylate|Aldehyde Tests': {
+        mechanismSummary:
+            'Tollens or Fehling reagents oxidize aldehydes in alkaline conditions to carboxylate ions (not free carboxylic acids).',
+        conditions: 'Warm alkaline Tollens or Fehling test conditions.',
+        quizData: {
+            prompt: 'Under aldehyde test conditions, which product form is produced directly?',
+            hiddenFields: ['target'],
+            answer: 'Carboxylate ion'
+        },
+        animationId: 'aldehyde-test-oxidation-to-carboxylate'
     },
     'Ald|Alc1|Reduction': {
         mechanismSummary: 'Hydride transfer reduces aldehyde carbonyl to primary alcohol.',
@@ -425,6 +460,28 @@ const linkMetadataByKey = {
             answer: 'Secondary alcohol'
         },
         animationId: 'ketone-reduction'
+    },
+    'Ald|Iodoform|Iodoform Test': {
+        mechanismSummary:
+            'Only ethanal among aldehydes gives a positive iodoform test because it contains the required CH3CO- equivalent on oxidation.',
+        conditions: 'I2/NaOH with warming; positive result for ethanal only among aldehydes.',
+        quizData: {
+            prompt: 'Which aldehyde gives a positive iodoform test?',
+            hiddenFields: ['target'],
+            answer: 'Ethanal'
+        },
+        animationId: 'aldehyde-iodoform-ethanal-only'
+    },
+    'Ket|Iodoform|Iodoform Test': {
+        mechanismSummary:
+            'Iodoform test is positive only for methyl ketones (RCOCH3), not all ketones.',
+        conditions: 'I2/NaOH with warming; requires a methyl ketone functional pattern.',
+        quizData: {
+            prompt: 'Which ketone class gives a positive iodoform test?',
+            hiddenFields: ['target'],
+            answer: 'Methyl ketones'
+        },
+        animationId: 'ketone-iodoform-methyl-ketone'
     },
     'Halo|Alkene|Elimination': {
         mechanismSummary: 'Base-induced elimination removes HX to regenerate a double bond.',

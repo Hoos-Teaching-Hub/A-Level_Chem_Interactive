@@ -33,7 +33,7 @@ const expectedPaths = [
     ['Halo', 'AgX', 'Silver Nitrate Test', 'Test Reaction'],
     ['Alc1', 'Ald', 'Oxidation', 'Partial Oxidation'],
     ['Ald', 'Carb', 'Oxidation', 'Full Oxidation'],
-    ['Ald', 'Carb', 'Aldehyde Tests', 'Oxidation (Test)'],
+    ['Ald', 'Carboxylate', 'Aldehyde Tests', 'Oxidation (Test)'],
     ['Alc1', 'Carb', 'Oxidation', 'Full Oxidation'],
     ['Alc2', 'Ket', 'Oxidation', 'Oxidation'],
     ['Alc3', 'NoRxn', 'No Reaction', 'N/A'],
