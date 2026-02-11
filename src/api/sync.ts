@@ -75,16 +75,20 @@ export const syncProgress = async (reason = 'manual'): Promise<SyncResult> => {
     };
   };
 
-  inFlight = runner()
-    .catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Unable to sync.';
-      return { status: 'error', reason, saved: 0, loaded: 0, error: message };
-    })
+  const toErrorResult = (err: unknown): SyncResult => {
+    const message = err instanceof Error ? err.message : 'Unable to sync.';
+    return { status: 'error', reason, saved: 0, loaded: 0, error: message };
+  };
+
+  const pendingSync = runner()
+    .catch(toErrorResult)
     .finally(() => {
       inFlight = null;
     });
 
-  return await inFlight;
+  inFlight = pendingSync;
+
+  return await pendingSync;
 };
 
 export const startBackgroundSync = (onResult?: (result: SyncResult) => void) => {
