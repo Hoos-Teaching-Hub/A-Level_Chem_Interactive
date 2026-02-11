@@ -67,6 +67,7 @@ Then open:
 
 After a successful student join, the app shows the Student MVP dashboard with mock activities,
 local progress updates, and a sync status bar.
+The activity detail panel now includes structured M1 blocks: `What`, `How`, `Why`, and `Exam tip`.
 After a successful teacher login, the app shows a dashboard with stats, leaderboard, activity
 distribution, search, and CSV export.
 

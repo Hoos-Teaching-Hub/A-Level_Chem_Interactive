@@ -162,7 +162,7 @@ export function StudentDashboard({ profile }: StudentDashboardProps) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                      {activity.topic}
+                      {activity.level} · {activity.topic}
                     </p>
                     <h3 className="text-base font-semibold">{activity.title}</h3>
                   </div>
@@ -189,7 +189,9 @@ export function StudentDashboard({ profile }: StudentDashboardProps) {
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Activity focus</p>
               <h3 className="text-2xl font-semibold">{selectedActivity.title}</h3>
-              <p className="mt-1 text-sm text-slate-400">{selectedActivity.topic}</p>
+              <p className="mt-1 text-sm text-slate-400">
+                {selectedActivity.level} · {selectedActivity.topic}
+              </p>
             </div>
             <span
               className={[
@@ -204,21 +206,29 @@ export function StudentDashboard({ profile }: StudentDashboardProps) {
           <p className="mt-4 text-sm text-slate-200">{selectedActivity.summary}</p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <h4 className="text-sm font-semibold text-slate-100">Objectives</h4>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-300">
-                {selectedActivity.objectives.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                What
+              </h4>
+              <p className="mt-2 text-sm text-slate-200">{selectedActivity.metadata.what}</p>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-slate-100">Exam tips</h4>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-300">
-                {selectedActivity.examTips.map((tip) => (
-                  <li key={tip}>{tip}</li>
-                ))}
-              </ul>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                How
+              </h4>
+              <p className="mt-2 text-sm text-slate-200">{selectedActivity.metadata.how}</p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Why
+              </h4>
+              <p className="mt-2 text-sm text-slate-200">{selectedActivity.metadata.why}</p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Exam tip
+              </h4>
+              <p className="mt-2 text-sm text-slate-200">{selectedActivity.metadata.examTip}</p>
             </div>
           </div>
 
