@@ -24,6 +24,11 @@ assert.ok(
 );
 
 assert.ok(
+  workflow.includes('build:\n    runs-on: ubuntu-latest\n    environment:\n      name: github-pages'),
+  'Expected Pages build job to use github-pages environment so environment secrets are available.',
+);
+
+assert.ok(
   workflow.includes('VITE_API_BASE_URL="${VITE_API_BASE_URL:-}"'),
   'Expected Pages workflow validation step to normalize optional VITE_API_BASE_URL input.',
 );
