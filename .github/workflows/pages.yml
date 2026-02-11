@@ -31,6 +31,18 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Validate API base URL secrets
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        run: |
+          VITE_API_BASE_URL="${VITE_API_BASE_URL:-}"
+          VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-}"
+          if [ -z "$VITE_API_BASE_URL" ] && [ -z "$VITE_SUPABASE_URL" ]; then
+            echo "::error::Both VITE_API_BASE_URL and VITE_SUPABASE_URL are empty. Set one GitHub Actions secret before deploying to Pages."
+            exit 1
+          fi
+
       - name: Build
         env:
           VITE_BASE_PATH: /A-Level_Chem_Interactive/

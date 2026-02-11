@@ -33,6 +33,8 @@ Important details:
 - The build can read optional Actions secrets:
   - `VITE_API_BASE_URL` (full functions URL, e.g. `https://<ref>.supabase.co/functions/v1`)
   - `VITE_SUPABASE_URL` (host URL, app appends `/functions/v1`)
+- The workflow now fails fast before build when **both** API URL secrets are
+  empty, so broken Pages deployments do not publish with missing backend config.
 - The app router uses `basename: import.meta.env.BASE_URL`, so client-side
   routes also resolve correctly under the repo subpath.
 - `vite.config.ts` reads `VITE_BASE_PATH` via Vite `loadEnv` (instead of
