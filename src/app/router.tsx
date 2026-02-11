@@ -4,7 +4,7 @@ import { RoleGuard } from './RoleGuard';
 import { Student } from '../pages/Student';
 import { Teacher } from '../pages/Teacher';
 
-export const router = createBrowserRouter([
+export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter([
   {
     path: '/',
     element: <App />, 

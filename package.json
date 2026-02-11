@@ -7,7 +7,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test:edge": "bash scripts/test-edge.sh"
+    "test:edge": "bash scripts/test-edge.sh",
+    "verify:local": "node tests/paths.test.js && npm run build && bash scripts/test-edge.sh"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.3",
