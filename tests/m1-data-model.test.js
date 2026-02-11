@@ -6,6 +6,9 @@ const { readText } = require('./test-utils');
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
 const FALLBACK_NODE_TOPIC = 'Organic chemistry';
 const FALLBACK_LINK_CONDITIONS = 'Structural relationship between compound classes.';
+const STRUCTURE_LINK_TYPE = 'structure';
+const MIN_SECTION = 1;
+const MAX_SECTION = 37;
 
 const PRIORITY_NODE_IDS = [
   'Crude',
@@ -36,19 +39,48 @@ const PRIORITY_LINK_KEYS = [
   'AlcoholGroup|Alkene|Dehydration',
 ];
 
+const assertSyllabusSections = (value, message) => {
+  assert.ok(Array.isArray(value) && value.length > 0, message);
+  value.forEach((section) => {
+    assert.ok(Number.isInteger(section), `${message} section "${section}" must be an integer.`);
+    assert.ok(
+      section >= MIN_SECTION && section <= MAX_SECTION,
+      `${message} section "${section}" must be in ${MIN_SECTION}-${MAX_SECTION}.`,
+    );
+  });
+  assert.strictEqual(new Set(value).size, value.length, `${message} must not contain duplicates.`);
+};
+
 const assertNodeMetadata = (node, label) => {
   assert.ok(
     node.level === 'AS' || node.level === 'A2',
     `${label} node "${node.id}" must include level (AS/A2).`,
   );
   assert.ok(isNonEmptyString(node.topic), `${label} node "${node.id}" must include topic.`);
+  assert.notStrictEqual(
+    node.topic,
+    FALLBACK_NODE_TOPIC,
+    `${label} node "${node.id}" still uses fallback topic.`,
+  );
   assert.ok(
-    Array.isArray(node.examTips),
+    Array.isArray(node.examTips) && node.examTips.length > 0,
     `${label} node "${node.id}" must include examTips array.`,
+  );
+  assert.ok(
+    node.examTips.every(isNonEmptyString),
+    `${label} node "${node.id}" has invalid examTips entries.`,
+  );
+  assertSyllabusSections(
+    node.syllabusSections,
+    `${label} node "${node.id}" must include syllabusSections.`,
   );
 };
 
 const assertLinkMetadata = (link, label) => {
+  assert.ok(
+    isNonEmptyString(link.reagents),
+    `${label} link "${link.source}->${link.target}" must include reagents.`,
+  );
   assert.ok(
     isNonEmptyString(link.conditions),
     `${label} link "${link.source}->${link.target}" must include conditions.`,
@@ -57,18 +89,37 @@ const assertLinkMetadata = (link, label) => {
     isNonEmptyString(link.mechanismSummary),
     `${label} link "${link.source}->${link.target}" must include mechanismSummary.`,
   );
+  assertSyllabusSections(
+    link.syllabusSections,
+    `${label} link "${link.source}->${link.target}" must include syllabusSections.`,
+  );
+
+  if (link.type === STRUCTURE_LINK_TYPE) {
+    return;
+  }
 
   const validQuiz =
-    link.quizData === null ||
-    link.quizData === undefined ||
-    (isNonEmptyString(link.quizData.prompt) &&
-      Array.isArray(link.quizData.hiddenFields) &&
-      isNonEmptyString(link.quizData.answer));
+    link.quizData &&
+    isNonEmptyString(link.quizData.prompt) &&
+    Array.isArray(link.quizData.hiddenFields) &&
+    link.quizData.hiddenFields.length > 0 &&
+    link.quizData.hiddenFields.every(isNonEmptyString) &&
+    isNonEmptyString(link.quizData.answer);
 
-  assert.ok(validQuiz, `${label} link "${link.source}->${link.target}" has invalid quizData.`);
+  assert.notStrictEqual(
+    link.conditions,
+    FALLBACK_LINK_CONDITIONS,
+    `${label} link "${link.source}->${link.target}" still uses fallback conditions.`,
+  );
+  assert.notStrictEqual(
+    link.mechanismSummary,
+    link.type,
+    `${label} link "${link.source}->${link.target}" still uses fallback mechanism summary.`,
+  );
+  assert.ok(validQuiz, `${label} link "${link.source}->${link.target}" must include valid quizData.`);
   assert.ok(
-    link.animationId === null || link.animationId === undefined || isNonEmptyString(link.animationId),
-    `${label} link "${link.source}->${link.target}" has invalid animationId.`,
+    isNonEmptyString(link.animationId),
+    `${label} link "${link.source}->${link.target}" must include animationId.`,
   );
 };
 
@@ -91,33 +142,12 @@ const assertPriorityMetadataCoverage = (gData, label) => {
   PRIORITY_NODE_IDS.forEach((id) => {
     const node = nodesById.get(id);
     assert.ok(node, `${label} is missing priority node "${id}".`);
-    assert.notStrictEqual(
-      node.topic,
-      FALLBACK_NODE_TOPIC,
-      `${label} node "${id}" still uses fallback topic.`,
-    );
-    assert.ok(
-      Array.isArray(node.examTips) && node.examTips.length > 0,
-      `${label} node "${id}" must include authored exam tips.`,
-    );
   });
 
   const linksByKey = new Map(gData.links.map((link) => [getLinkKey(link), link]));
   PRIORITY_LINK_KEYS.forEach((key) => {
     const link = linksByKey.get(key);
     assert.ok(link, `${label} is missing priority link "${key}".`);
-    assert.notStrictEqual(
-      link.conditions,
-      FALLBACK_LINK_CONDITIONS,
-      `${label} link "${key}" still uses fallback conditions.`,
-    );
-    assert.notStrictEqual(
-      link.mechanismSummary,
-      link.type,
-      `${label} link "${key}" still uses fallback mechanism summary.`,
-    );
-    assert.ok(link.quizData, `${label} link "${key}" must include quizData.`);
-    assert.ok(link.animationId, `${label} link "${key}" must include animationId.`);
   });
 };
 
@@ -141,14 +171,21 @@ assert.deepStrictEqual(
   'src and legacy node sets should stay aligned.',
 );
 
-const hasNodeTips = srcData.gData.nodes.some((node) => node.examTips.length > 0);
-assert.ok(hasNodeTips, 'Expected at least one node to include exam tips.');
+const srcLinkKeys = new Set(srcData.gData.links.map((link) => getLinkKey(link)));
+const legacyLinkKeys = new Set(legacyData.gData.links.map((link) => getLinkKey(link)));
+assert.deepStrictEqual(
+  Array.from(srcLinkKeys).sort(),
+  Array.from(legacyLinkKeys).sort(),
+  'src and legacy link sets should stay aligned.',
+);
 
-const hasQuizData = srcData.gData.links.some((link) => link.quizData);
-assert.ok(hasQuizData, 'Expected at least one link to include quizData.');
-
-const hasAnimation = srcData.gData.links.some((link) => link.animationId);
-assert.ok(hasAnimation, 'Expected at least one link to include animationId.');
+const reactionLinks = srcData.gData.links.filter((link) => link.type !== STRUCTURE_LINK_TYPE);
+const reactionAnimationIds = reactionLinks.map((link) => link.animationId);
+assert.strictEqual(
+  new Set(reactionAnimationIds).size,
+  reactionAnimationIds.length,
+  'Expected reaction links to use unique animationId values.',
+);
 
 const mapHtml = readText('public/legacy/organic-map.html');
 ['infoWhat', 'infoHow', 'infoWhy', 'infoExamTip'].forEach((id) => {

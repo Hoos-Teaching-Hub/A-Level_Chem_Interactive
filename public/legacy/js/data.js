@@ -53,9 +53,27 @@ const baseNodes = [
 
 const baseLinks = [
         // Structural Links (New) - No particles, no arrows
-        { source: 'AlcoholGroup', target: 'Alc1', label: 'Class', type: 'structure' },
-        { source: 'AlcoholGroup', target: 'Alc2', label: 'Class', type: 'structure' },
-        { source: 'AlcoholGroup', target: 'Alc3', label: 'Class', type: 'structure' },
+        {
+            source: 'AlcoholGroup',
+            target: 'Alc1',
+            label: 'Class',
+            reagents: 'Classification link only (no reagent)',
+            type: 'structure'
+        },
+        {
+            source: 'AlcoholGroup',
+            target: 'Alc2',
+            label: 'Class',
+            reagents: 'Classification link only (no reagent)',
+            type: 'structure'
+        },
+        {
+            source: 'AlcoholGroup',
+            target: 'Alc3',
+            label: 'Class',
+            reagents: 'Classification link only (no reagent)',
+            type: 'structure'
+        },
 
         // Hydrocarbon
         { source: 'Crude', target: 'Alkane', label: 'Cracking', reagents: 'Heat + Al₂O₃', type: 'Thermal Decomposition' },
@@ -162,6 +180,11 @@ const nodeMetadataById = {
         topic: 'Hydroxy compounds',
         examTips: ['Secondary alcohol oxidation gives ketones under reflux conditions.']
     },
+    Alc3: {
+        level: 'AS',
+        topic: 'Hydroxy compounds',
+        examTips: ['Tertiary alcohols resist oxidation under standard dichromate conditions.']
+    },
     Ald: {
         level: 'AS',
         topic: 'Carbonyl compounds',
@@ -177,15 +200,85 @@ const nodeMetadataById = {
         topic: 'Carboxylic acids and derivatives',
         examTips: ['Remember acid-carbonate reactions release CO2 effervescence.']
     },
+    Ester: {
+        level: 'A2',
+        topic: 'Carboxylic acids and derivatives',
+        examTips: ['Name esters from alcohol first, then carboxylate part ending in -oate.']
+    },
+    Amine: {
+        level: 'A2',
+        topic: 'Nitrogen compounds',
+        examTips: ['Use excess ethanolic ammonia to favor primary amine formation in substitution routes.']
+    },
+    Nitrile: {
+        level: 'A2',
+        topic: 'Nitrogen compounds',
+        examTips: ['Nitrile formation extends the carbon chain by one carbon atom.']
+    },
+    Diol: {
+        level: 'AS',
+        topic: 'Hydroxy compounds',
+        examTips: ['Cold, dilute permanganate indicates alkene oxidation to vicinal diols.']
+    },
+    Hydroxynitrile: {
+        level: 'A2',
+        topic: 'Nitrogen compounds',
+        examTips: ['Hydroxynitrile formation requires in situ HCN generated safely from cyanide and acid.']
+    },
     Polymer: {
         level: 'A2',
         topic: 'Polymerisation',
         examTips: ['State monomer and repeat unit when describing polymer formation.']
     },
+    PVC: {
+        level: 'A2',
+        topic: 'Polymerisation',
+        examTips: ['Include repeat unit brackets and continuation bonds when drawing PVC structures.']
+    },
     Chloroalkene: {
         level: 'A2',
         topic: 'Polymerisation',
         examTips: ['PVC is formed by addition polymerisation of chloroethene.']
+    },
+    Combustion: {
+        level: 'AS',
+        topic: 'Hydrocarbons',
+        examTips: ['Complete combustion gives CO2 and H2O when oxygen is in excess.']
+    },
+    IncompleteCombustion: {
+        level: 'AS',
+        topic: 'Hydrocarbons',
+        examTips: ['Limited oxygen leads to toxic CO or soot, so state the oxygen condition explicitly.']
+    },
+    CrackingMix: {
+        level: 'AS',
+        topic: 'Hydrocarbons',
+        examTips: ['Cracking products are a mixture, so identify both alkane and alkene fractions.']
+    },
+    Alkoxide: {
+        level: 'AS',
+        topic: 'Hydroxy compounds',
+        examTips: ['Alcohol plus sodium forms alkoxide and hydrogen gas; note the bubbling evidence.']
+    },
+    Carboxylate: {
+        level: 'A2',
+        topic: 'Carboxylic acids and derivatives',
+        examTips: ['Carboxylate salts are ionic and usually more water-soluble than parent acids.']
+    },
+    AgX: {
+        level: 'AS',
+        topic: 'Halogen compounds',
+        examTips: ['Learn AgCl, AgBr, AgI colors and ammonia solubility trends for halide tests.']
+    },
+    DNPH: {
+        level: 'AS',
+        topic: 'Carbonyl compounds',
+        examTips: ['2,4-DNPH gives an orange precipitate with aldehydes and ketones.']
+    },
+    Iodoform: {
+        level: 'AS',
+        topic: 'Carbonyl compounds',
+        examTips: ['Iodoform test identifies CH3CO- or CH3CH(OH)- containing compounds.']
     },
     NoRxn: {
         level: 'AS',
@@ -327,35 +420,212 @@ const linkMetadataByKey = {
     }
 };
 
+const STRUCTURE_LINK_TYPE = 'structure';
+const AS_SECTION_MAX = 22;
+const INTRO_ORGANIC_SECTIONS = [13, 29];
+const SYNTHESIS_SECTIONS = [21, 36];
+const ANALYTICAL_SECTIONS = [22, 37];
+const A2_FALLBACK_NODE_IDS = new Set([
+    'Carb',
+    'Ester',
+    'Amine',
+    'Nitrile',
+    'Hydroxynitrile',
+    'Polymer',
+    'PVC',
+    'Chloroalkene',
+    'Carboxylate'
+]);
+const nodeNameById = new Map(baseNodes.map((node) => [node.id, node.name]));
+const TOPIC_SYLLABUS_SECTIONS = {
+    Hydrocarbons: [14, 30],
+    'Halogen compounds': [15, 31],
+    'Hydroxy compounds': [16, 32],
+    'Carbonyl compounds': [17],
+    'Carboxylic acids and derivatives': [18, 33],
+    'Nitrogen compounds': [19, 34],
+    Polymerisation: [20, 35],
+    'Reaction limits': SYNTHESIS_SECTIONS
+};
+const INTRO_NODE_IDS = new Set([
+    'Crude',
+    'Alkane',
+    'Alkene',
+    'Halo',
+    'AlcoholGroup',
+    'Alc1',
+    'Alc2',
+    'Alc3'
+]);
+const ANALYTICAL_NODE_IDS = new Set(['AgX', 'DNPH', 'Iodoform']);
+const SYNTHESIS_LINK_LABELS = new Set([
+    'Hydrolysis',
+    'Esterification',
+    'Substitution',
+    'Elimination',
+    'Reduction',
+    'Oxidation',
+    'Hydration',
+    'Dehydration'
+]);
+
 const getLinkKey = (link) => `${link.source}|${link.target}|${link.label}`;
+const slugify = (value) =>
+    String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'pathway';
+const getNodeDisplayName = (nodeId) => nodeNameById.get(nodeId) || String(nodeId);
+const getTopicSyllabusSections = (topic) => TOPIC_SYLLABUS_SECTIONS[topic] || [];
+const normalizeSections = (sections) =>
+    Array.from(
+        new Set(
+            sections.filter(
+                (section) => Number.isInteger(section) && section >= 1 && section <= 37
+            )
+        )
+    ).sort((a, b) => a - b);
+
+const ensureSectionRange = (sections, level) => {
+    const hasAsSection = sections.some((section) => section <= AS_SECTION_MAX);
+    const hasA2Section = sections.some((section) => section > AS_SECTION_MAX);
+
+    if (level === 'AS' && !hasAsSection) {
+        return normalizeSections([...sections, INTRO_ORGANIC_SECTIONS[0]]);
+    }
+
+    if (level === 'A2' && !hasA2Section) {
+        return normalizeSections([...sections, INTRO_ORGANIC_SECTIONS[1]]);
+    }
+
+    return sections;
+};
+
+const buildFallbackNodeMetadata = (node) => {
+    const level = A2_FALLBACK_NODE_IDS.has(node.id) ? 'A2' : 'AS';
+    const topic = level === 'A2' ? 'A2 organic chemistry' : 'AS organic chemistry';
+    const defaultSection = level === 'A2' ? INTRO_ORGANIC_SECTIONS[1] : INTRO_ORGANIC_SECTIONS[0];
+    return {
+        level,
+        topic,
+        examTips: [`Link ${node.name} to named reagents and conditions when describing pathways.`],
+        syllabusSections: [defaultSection]
+    };
+};
+
+const buildNodeSyllabusSections = ({ node, metadata, level, topic, fallback }) => {
+    const sections = [
+        ...(Array.isArray(metadata.syllabusSections) ? metadata.syllabusSections : []),
+        ...getTopicSyllabusSections(topic),
+        ...(Array.isArray(fallback.syllabusSections) ? fallback.syllabusSections : [])
+    ];
+
+    if (INTRO_NODE_IDS.has(node.id)) {
+        sections.push(...INTRO_ORGANIC_SECTIONS);
+    }
+
+    if (ANALYTICAL_NODE_IDS.has(node.id)) {
+        sections.push(...ANALYTICAL_SECTIONS);
+    }
+
+    return ensureSectionRange(normalizeSections(sections), level);
+};
 
 const mapNodeMetadata = (node) => {
     const metadata = nodeMetadataById[node.id] || {};
+    const fallback = buildFallbackNodeMetadata(node);
+    const level = metadata.level || fallback.level;
+    const topic = metadata.topic || fallback.topic;
     return {
         ...node,
-        level: metadata.level || 'AS',
-        topic: metadata.topic || 'Organic chemistry',
-        examTips: metadata.examTips || []
+        level,
+        topic,
+        examTips:
+            Array.isArray(metadata.examTips) && metadata.examTips.length > 0
+                ? metadata.examTips
+                : fallback.examTips,
+        syllabusSections: buildNodeSyllabusSections({
+            node,
+            metadata,
+            level,
+            topic,
+            fallback
+        })
     };
 };
 
-const mapLinkMetadata = (link) => {
+const buildFallbackLinkMetadata = (link) => {
+    const sourceName = getNodeDisplayName(link.source);
+    const targetName = getNodeDisplayName(link.target);
+
+    if (link.type === STRUCTURE_LINK_TYPE) {
+        return {
+            conditions: link.reagents || 'Classification link only (no reagent).',
+            mechanismSummary: `${targetName} is classified under ${sourceName} for revision grouping.`,
+            quizData: null,
+            animationId: null
+        };
+    }
+
+    const pathwayName = link.label || link.type || `${sourceName} to ${targetName}`;
+    return {
+        conditions: link.reagents || `Use standard ${pathwayName.toLowerCase()} conditions.`,
+        mechanismSummary: `${pathwayName} converts ${sourceName} to ${targetName} via ${
+            link.type || 'an organic pathway'
+        }.`,
+        quizData: {
+            prompt: `Which pathway converts ${sourceName} to ${targetName}?`,
+            hiddenFields: ['label'],
+            answer: pathwayName
+        },
+        animationId: `${slugify(link.source)}-to-${slugify(link.target)}-${slugify(pathwayName)}`
+    };
+};
+
+const buildLinkSyllabusSections = ({ link, metadata, nodesById }) => {
+    const sourceSections = nodesById.get(link.source)?.syllabusSections || [];
+    const targetSections = nodesById.get(link.target)?.syllabusSections || [];
+    const sections = [
+        ...(Array.isArray(metadata.syllabusSections) ? metadata.syllabusSections : []),
+        ...sourceSections,
+        ...targetSections
+    ];
+
+    if (link.type === STRUCTURE_LINK_TYPE) {
+        sections.push(...INTRO_ORGANIC_SECTIONS);
+    }
+
+    if (/test/i.test(link.label || '') || /test/i.test(link.type || '') || ANALYTICAL_NODE_IDS.has(link.target)) {
+        sections.push(...ANALYTICAL_SECTIONS);
+    }
+
+    if (SYNTHESIS_LINK_LABELS.has(link.label)) {
+        sections.push(...SYNTHESIS_SECTIONS);
+    }
+
+    return normalizeSections(sections);
+};
+
+const mapLinkMetadata = (link, nodesById) => {
     const metadata = linkMetadataByKey[getLinkKey(link)] || {};
+    const fallback = buildFallbackLinkMetadata(link);
     return {
         ...link,
-        conditions:
-            metadata.conditions ||
-            link.reagents ||
-            'Structural relationship between compound classes.',
-        mechanismSummary: metadata.mechanismSummary || link.type || 'Reaction pathway',
-        quizData: metadata.quizData || null,
-        animationId: metadata.animationId || null
+        conditions: metadata.conditions || fallback.conditions,
+        mechanismSummary: metadata.mechanismSummary || fallback.mechanismSummary,
+        quizData: metadata.quizData || fallback.quizData,
+        animationId: metadata.animationId || fallback.animationId,
+        syllabusSections: buildLinkSyllabusSections({ link, metadata, nodesById })
     };
 };
 
+const mappedNodes = baseNodes.map(mapNodeMetadata);
+const mappedNodeById = new Map(mappedNodes.map((node) => [node.id, node]));
+
 const gData = {
-    nodes: baseNodes.map(mapNodeMetadata),
-    links: baseLinks.map(mapLinkMetadata)
+    nodes: mappedNodes,
+    links: baseLinks.map((link) => mapLinkMetadata(link, mappedNodeById))
 };
 
 const compoundDescriptions = {
