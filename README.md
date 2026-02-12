@@ -99,7 +99,7 @@ Then open:
 - `http://localhost:5173/teacher` for the teacher login flow.
 
 After a successful student join, the app shows the Student MVP dashboard with mock activities,
-local progress updates, and a sync status bar.
+local progress updates, a sync status bar, and quick actions to open/jump to the reaction map.
 The activity detail panel now includes structured M1 blocks: `What`, `How`, `Why`, and `Exam tip`.
 After a successful teacher login, the app shows a dashboard with stats, leaderboard, activity
 distribution, search, and CSV export.

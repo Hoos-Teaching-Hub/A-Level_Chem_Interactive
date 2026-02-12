@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { StudentProfile } from '../api/session';
 import {
   getLastSyncAt,
@@ -116,6 +117,10 @@ export function StudentDashboard({ profile }: StudentDashboardProps) {
 
   const selectedRecord = progressMap[selectedActivity.id];
   const selectedStatus = resolveStatus(selectedRecord);
+  const jumpMapSearch = new URLSearchParams({
+    activity: selectedActivity.id,
+    topic: selectedActivity.topic,
+  }).toString();
 
   return (
     <section className="space-y-6">
@@ -126,8 +131,14 @@ export function StudentDashboard({ profile }: StudentDashboardProps) {
             <h2 className="text-3xl font-semibold">Welcome, {profile.displayName}</h2>
             <p className="mt-1 text-sm text-slate-400">Class code: {profile.classCode}</p>
           </div>
-          <div className="text-sm text-slate-300">
-            Focus set: {mockActivities.length} activities
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="text-sm text-slate-300">Focus set: {mockActivities.length} activities</div>
+            <Link
+              className="rounded-lg border border-sky-500/50 px-3 py-2 text-xs font-semibold text-sky-200 transition hover:border-sky-400 hover:text-sky-100"
+              to="/map"
+            >
+              Open reaction map
+            </Link>
           </div>
         </div>
       </div>
@@ -233,6 +244,12 @@ export function StudentDashboard({ profile }: StudentDashboardProps) {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              className="rounded-lg border border-sky-500/50 px-4 py-2 text-xs font-semibold text-sky-200 transition hover:border-sky-400 hover:text-sky-100"
+              to={`/map?${jumpMapSearch}`}
+            >
+              Jump to map
+            </Link>
             <button
               type="button"
               onClick={() => handleStatusChange(selectedActivity.id, 'in_progress')}

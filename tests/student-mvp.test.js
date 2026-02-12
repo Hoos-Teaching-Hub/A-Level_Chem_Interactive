@@ -20,7 +20,7 @@ assertIncludesAll(
 const dashboardContents = readText('src/student/StudentDashboard.tsx');
 assertIncludesAll(
   dashboardContents,
-  ['mockActivities', 'StudentStatusBar', 'queueProgressUpdate', 'Activity focus'],
+  ['mockActivities', 'StudentStatusBar', 'queueProgressUpdate', 'Activity focus', 'to="/map"', 'Jump to map'],
   'Student dashboard',
 );
 
