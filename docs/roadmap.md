@@ -83,6 +83,26 @@
 
 ---
 
+## 1.2) UI/display recommendation mapping (current)
+
+This section maps the proposed UI/display improvements to existing milestones so planning remains consistent.
+
+| Recommendation | Primary milestone | Secondary milestone | Why this milestone fit is correct | Acceptance check |
+|---|---|---|---|---|
+| Mechanism Practice Mode (predict next arrow, then reveal/check) | M3 | M2 | This is active recall behavior built on top of mechanism playback, which is M3’s core purpose. | Learner can attempt a step, submit, and reveal expected electron movement with feedback. |
+| Advanced animation transport controls (`prev`, `next`, `reverse`, `loop`) | M2 | M3 | Control fidelity belongs to interactive mechanism tooling before quiz scoring layers. | Controls change timeline state deterministically and remain stable with slider scrubbing. |
+| Split-screen mechanism compare mode | M2 | M4 | Comparative visualization is interactive understanding; it also supports route-evaluation tasks later in challenges. | User can view two mechanisms/steps side-by-side with synchronized or independent playback. |
+| Structure interaction panel (2D/3D toggle, style toggle) | M2 | M5 | This is mechanism/structure comprehension tooling; it becomes more valuable as A2 coverage expands. | User can switch representation modes without losing selected context or metadata. |
+| Difficulty layers (`Core` vs `Exam`) | M3 | M2 | Pedagogical layering changes recall/testing depth rather than base rendering only. | Toggle changes annotation density and exam-trap hints while preserving mechanism correctness. |
+| Searchable Mechanism Library (filter by class/topic) | M5 | M2 | Discovery/filtering scales with full syllabus coverage and topic tagging from expansion work. | User can find mechanisms by topic/class quickly; filters return consistent curated sets. |
+
+Recommended delivery order aligned to milestones:
+1. M2: advanced transport controls + structure interaction panel + compare mode.
+2. M3: practice mode + difficulty layers.
+3. M5: searchable mechanism library once broader mechanism coverage is in place.
+
+---
+
 ## 2) A-Level 9701 Knowledge Areas → Feature Mapping
 
 > **Confirmed:** Section names and numbering below match the official 2025–2027 syllabus content overview (AS topics 1–22, A Level topics 23–37).
