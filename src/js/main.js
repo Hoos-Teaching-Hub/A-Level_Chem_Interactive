@@ -18,6 +18,8 @@ const organicMapData = typeof window !== 'undefined' ? window.OrganicMapData : n
 const gData = organicMapData && organicMapData.gData ? organicMapData.gData : { nodes: [], links: [] };
 const compoundDescriptions =
     organicMapData && organicMapData.compoundDescriptions ? organicMapData.compoundDescriptions : {};
+const organicMapAnimations =
+    typeof window !== 'undefined' && window.OrganicMapAnimations ? window.OrganicMapAnimations : null;
 
 // Global variables for Graph and UI state.
 // These are assigned after the DOM is ready so we can reuse them in handlers.
@@ -26,6 +28,9 @@ let highlightLink = null;
 let fallbackRedraw = null;
 let fallbackCleanup = null;
 let mapBootstrapped = false;
+let animationRegistry = {};
+let animationRafId = null;
+let animationPathLength = 0;
 
 // UI Elements (populated on load).
 // We store references once to avoid repeated DOM queries.
@@ -43,6 +48,14 @@ let infoWhatElem;
 let infoHowElem;
 let infoWhyElem;
 let infoExamTipElem;
+let animationPanelElem;
+let animationStatusElem;
+let animationTitleElem;
+let animationSummaryElem;
+let animationStepElem;
+let animationFallbackElem;
+let animationPathElem;
+let animationMarkerElem;
 
 const defaultInfo = {
     what: 'Select a node or reaction to view structured study notes.',
@@ -67,6 +80,147 @@ function renderInfoBlocks(info = {}) {
     infoHowElem.innerText = info.how || defaultInfo.how;
     infoWhyElem.innerText = info.why || defaultInfo.why;
     infoExamTipElem.innerText = info.examTip || defaultInfo.examTip;
+}
+
+function setAnimationMarkerProgress(progressRatio) {
+    if (!animationPathElem || !animationMarkerElem || !animationPathLength) {
+        return;
+    }
+
+    const boundedProgress = Math.max(0, Math.min(1, progressRatio));
+    const point = animationPathElem.getPointAtLength(animationPathLength * boundedProgress);
+    animationMarkerElem.setAttribute('cx', point.x.toFixed(2));
+    animationMarkerElem.setAttribute('cy', point.y.toFixed(2));
+}
+
+function setAnimationStatus(status) {
+    if (animationStatusElem) {
+        animationStatusElem.innerText = status;
+    }
+}
+
+function stopAnimationPlayback() {
+    if (animationRafId !== null) {
+        window.cancelAnimationFrame(animationRafId);
+        animationRafId = null;
+    }
+}
+
+function hideAnimationPanel() {
+    stopAnimationPlayback();
+    if (animationPanelElem) {
+        animationPanelElem.classList.add('hidden');
+    }
+}
+
+function showAnimationUnavailable(message) {
+    if (!animationPanelElem) {
+        return null;
+    }
+
+    stopAnimationPlayback();
+    animationPanelElem.classList.remove('hidden');
+    if (animationTitleElem) animationTitleElem.innerText = 'Animation unavailable';
+    if (animationSummaryElem) animationSummaryElem.innerText = 'This pathway currently has no playable mechanism asset.';
+    if (animationStepElem) animationStepElem.innerText = '';
+    if (animationFallbackElem) {
+        animationFallbackElem.classList.remove('hidden');
+        animationFallbackElem.innerText = message;
+    }
+    if (animationPathElem) {
+        animationPathElem.setAttribute('d', '');
+    }
+    if (animationMarkerElem) {
+        animationMarkerElem.setAttribute('cx', '24');
+        animationMarkerElem.setAttribute('cy', '84');
+    }
+    animationPathLength = 0;
+    setAnimationStatus('Unavailable');
+    return null;
+}
+
+function prepareAnimationPanel(link) {
+    if (!animationPanelElem) {
+        return null;
+    }
+
+    if (!link || !link.animationId) {
+        return showAnimationUnavailable('No animation ID is attached to this pathway yet.');
+    }
+
+    const animationSpec = animationRegistry[link.animationId];
+    if (!animationSpec) {
+        return showAnimationUnavailable('No animation asset is registered for this pathway yet.');
+    }
+
+    stopAnimationPlayback();
+    animationPanelElem.classList.remove('hidden');
+    if (animationFallbackElem) {
+        animationFallbackElem.classList.add('hidden');
+        animationFallbackElem.innerText = '';
+    }
+
+    if (animationTitleElem) animationTitleElem.innerText = animationSpec.title || 'Mechanism animation';
+    if (animationSummaryElem) {
+        animationSummaryElem.innerText = animationSpec.summary || 'Mechanism step preview.';
+    }
+    if (animationStepElem) {
+        const firstStep =
+            Array.isArray(animationSpec.steps) && animationSpec.steps.length
+                ? animationSpec.steps[0]
+                : 'Mechanism step preview.';
+        animationStepElem.innerText = firstStep;
+    }
+
+    if (animationPathElem) {
+        animationPathElem.setAttribute('d', animationSpec.path || '');
+    }
+
+    animationPathLength = 0;
+    if (animationPathElem && animationSpec.path) {
+        try {
+            animationPathLength = animationPathElem.getTotalLength();
+        } catch (error) {
+            console.warn('Unable to read animation path length for pathway animation.', error);
+            animationPathLength = 0;
+        }
+    }
+    setAnimationMarkerProgress(0);
+    setAnimationStatus('Ready');
+    return animationSpec;
+}
+
+function playAnimationSpec(animationSpec) {
+    if (!animationSpec) {
+        return;
+    }
+
+    const steps =
+        Array.isArray(animationSpec.steps) && animationSpec.steps.length
+            ? animationSpec.steps
+            : ['Mechanism step preview.'];
+    const durationMs =
+        Number.isFinite(animationSpec.durationMs) && animationSpec.durationMs > 0
+            ? animationSpec.durationMs
+            : 2800;
+
+    stopAnimationPlayback();
+    setAnimationStatus('Playing');
+
+    const startTime = performance.now();
+    const tick = now => {
+        const elapsed = now - startTime;
+        const cycleProgress = ((elapsed % durationMs) + durationMs) / durationMs;
+
+        setAnimationMarkerProgress(cycleProgress);
+        if (animationStepElem) {
+            const stepIndex = Math.min(steps.length - 1, Math.floor(cycleProgress * steps.length));
+            animationStepElem.innerText = steps[stepIndex];
+        }
+        animationRafId = window.requestAnimationFrame(tick);
+    };
+
+    animationRafId = window.requestAnimationFrame(tick);
 }
 
 function showStartupError(message) {
@@ -505,6 +659,7 @@ function showDefault() {
     contentArea.style.display = 'block';
     dynamicContent.classList.add('hidden');
     renderInfoBlocks(defaultInfo);
+    hideAnimationPanel();
     highlightLink = null;
     if (Graph) Graph.linkDirectionalParticleSpeed(l => 0.002).linkWidth(1); // Reset
     if (fallbackRedraw) fallbackRedraw();
@@ -540,6 +695,7 @@ function showReaction(link) {
         why: `Use this conversion when planning routes between ${sourceName} and ${targetName}.`,
         examTip: `${quizPrompt}${quizAnswer}`.trim() || `Quote full conditions: ${reagentsElem.innerText}.`
     });
+    const preparedAnimation = prepareAnimationPanel(link);
 
     // Highlight Visualization.
     // We visually emphasize the chosen link by increasing width and particle
@@ -560,20 +716,23 @@ function showReaction(link) {
     // The animation button provides a quick "pulse" to draw attention to the
     // selected reaction without permanently altering the graph.
     animateBtn.onclick = () => {
-        if (!Graph) return;
-        // Burst speed animation
-        const originalSpeed = 0.02;
-        const burstSpeed = 0.1;
+        if (Graph) {
+            // Burst speed animation
+            const originalSpeed = 0.02;
+            const burstSpeed = 0.1;
 
-        // Temporarily increase particle density and speed to emphasize the selected pathway.
-        Graph.linkDirectionalParticles(l => (l === highlightLink ? 8 : (l.type === 'structure' ? 0 : 2)));
-        Graph.linkDirectionalParticleSpeed(l => (l === highlightLink ? burstSpeed : 0.002));
+            // Temporarily increase particle density and speed to emphasize the selected pathway.
+            Graph.linkDirectionalParticles(l => (l === highlightLink ? 8 : (l.type === 'structure' ? 0 : 2)));
+            Graph.linkDirectionalParticleSpeed(l => (l === highlightLink ? burstSpeed : 0.002));
 
-        setTimeout(() => {
-            // Reset to baseline values so highlight animations don't stack after repeated clicks.
-            Graph.linkDirectionalParticles(l => (l.type === 'structure' ? 0 : 2)); // Reset density
-            Graph.linkDirectionalParticleSpeed(l => (l === highlightLink ? originalSpeed : 0.002)); // Reset speed
-        }, 1500);
+            setTimeout(() => {
+                // Reset to baseline values so highlight animations don't stack after repeated clicks.
+                Graph.linkDirectionalParticles(l => (l.type === 'structure' ? 0 : 2)); // Reset density
+                Graph.linkDirectionalParticleSpeed(l => (l === highlightLink ? originalSpeed : 0.002)); // Reset speed
+            }, 1500);
+        }
+        const nextAnimation = prepareAnimationPanel(link) || preparedAnimation;
+        playAnimationSpec(nextAnimation);
     };
 }
 
@@ -603,6 +762,7 @@ function showCompound(node) {
         why: `${node.name} appears in multi-step synthesis and data interpretation questions.`,
         examTip: firstTip || defaultInfo.examTip
     });
+    hideAnimationPanel();
     highlightLink = null;
     // Reset links but preserve structure link subtlety so the network stays readable.
     if (Graph) {
@@ -636,6 +796,13 @@ function initMap() {
         return;
     }
 
+    if (organicMapAnimations && typeof organicMapAnimations.buildAnimationRegistry === 'function') {
+        animationRegistry = organicMapAnimations.buildAnimationRegistry(gData.links);
+    } else {
+        animationRegistry = {};
+        console.warn('Animation registry helper not loaded. Mechanism playback will show fallback messages.');
+    }
+
     // 1. Initialize UI Elements
     contentArea = document.getElementById('contentArea');
     dynamicContent = document.getElementById('dynamicContent');
@@ -651,6 +818,14 @@ function initMap() {
     infoHowElem = document.getElementById('infoHow');
     infoWhyElem = document.getElementById('infoWhy');
     infoExamTipElem = document.getElementById('infoExamTip');
+    animationPanelElem = document.getElementById('animationPanel');
+    animationStatusElem = document.getElementById('animationStatus');
+    animationTitleElem = document.getElementById('animationTitle');
+    animationSummaryElem = document.getElementById('animationSummary');
+    animationStepElem = document.getElementById('animationStep');
+    animationFallbackElem = document.getElementById('animationFallback');
+    animationPathElem = document.getElementById('animationPath');
+    animationMarkerElem = document.getElementById('animationMarker');
     const mapContainer = document.getElementById('mynetwork');
     if (!mapContainer) {
         showStartupError('Map container is missing from the page. Reload and try again.');

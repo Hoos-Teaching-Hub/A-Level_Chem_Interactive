@@ -95,6 +95,24 @@
                     </svg>
                     Simulate Reaction
                 </button>
+                <div id="animationPanel" class="hidden bg-gray-900/80 p-3 rounded-lg border border-purple-700/50">
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="text-xs font-bold text-purple-200 uppercase tracking-wide">Mechanism Animation</span>
+                        <span id="animationStatus"
+                            class="text-[10px] font-semibold uppercase tracking-wide text-purple-300">Idle</span>
+                    </div>
+                    <p id="animationTitle" class="text-sm font-semibold text-white mt-2"></p>
+                    <p id="animationSummary" class="text-xs text-gray-300 mt-1"></p>
+                    <div class="mt-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
+                        <svg id="animationSvg" viewBox="0 0 360 110" class="w-full h-20" aria-label="Mechanism animation">
+                            <path id="animationPath" d="" fill="none" stroke="#7c3aed" stroke-width="4"
+                                stroke-linecap="round" />
+                            <circle id="animationMarker" cx="24" cy="84" r="6" fill="#e9d5ff" />
+                        </svg>
+                    </div>
+                    <p id="animationStep" class="text-xs text-purple-100 mt-2"></p>
+                    <p id="animationFallback" class="hidden text-xs text-amber-200 mt-2"></p>
+                </div>
             </div>
 
             <div id="compoundDetails" class="hidden">
@@ -143,6 +161,7 @@
     </div>
 
     <script src="js/data.js?v=20260212c"></script>
+    <script src="js/animations.js?v=20260219a"></script>
     <script src="js/main.js?v=20260212c"></script>
     <script>
         window.addEventListener('load', () => {

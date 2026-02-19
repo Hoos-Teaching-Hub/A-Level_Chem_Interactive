@@ -66,6 +66,26 @@ student join or teacher login. The teacher route and teacher-only UI are blocked
 - Open `/organic-map.html`, click a node or reaction link, and confirm all four info blocks populate.
 - In browser devtools, confirm `document.querySelector('#mynetwork canvas')` returns an element.
 
+## M2 kickoff — Mechanism animation player (first slice)
+
+**What changed**
+- Added a shared animation registry module at `public/js/animations.js` and `src/js/animations.js`.
+  - The registry is generated from `animationId` values in map links, with curated overrides for key mechanisms.
+- Added an embedded mechanism animation panel to the map sidebar with fixed IDs:
+  - `animationPanel`, `animationTitle`, `animationSummary`, `animationStep`, `animationSvg`, `animationPath`, `animationMarker`.
+- Updated map runtime to load `window.OrganicMapAnimations`, prepare per-link animation specs, and play a reusable SVG path animation.
+- Added explicit fallback behavior when animation metadata is missing:
+  - `No animation ID is attached to this pathway yet.`
+  - `No animation asset is registered for this pathway yet.`
+
+**Why**
+- Aligns with the roadmap M2 requirement for a reusable animation player + registry with graceful fallback behavior.
+
+**How to verify**
+- Run `node tests/m2-animation-player.test.js`.
+- Open `/organic-map.html`, click a reaction link, then click `Simulate Reaction`.
+- Confirm the sidebar animation panel updates title/summary/step text and animates the marker on the SVG path.
+
 ## Project structure (M0 frontend)
 
 ```
