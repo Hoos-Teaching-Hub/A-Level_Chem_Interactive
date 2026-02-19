@@ -8,6 +8,7 @@ with standalone organic map assets under `public/`. The roadmap lives in
 
 - Milestone scope and acceptance checks: [`docs/roadmap.md`](docs/roadmap.md)
 - Implementation history and verification logs: [`docs/development-history.md`](docs/development-history.md)
+- M2 animation implementation standard: [`docs/m2-animation-standard.md`](docs/m2-animation-standard.md)
 
 ## Project structure (M0 frontend)
 
@@ -68,6 +69,7 @@ Run the required structure and edge checks in order:
 ```sh
 node tests/paths.test.js
 node tests/structure.test.js
+node tests/m2-animation-standard.test.js
 bash scripts/test-edge.sh
 ```
 
