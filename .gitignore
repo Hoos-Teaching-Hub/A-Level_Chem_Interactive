@@ -19,6 +19,7 @@ supabase/.env.edge
 
 # Project-specific sensitive/demo data
 supabase/seed/demo-codes.txt
+supabase/seed/seed-demo.sql
 
 # Logs
 *.log
