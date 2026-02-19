@@ -4,87 +4,10 @@ Modern React + Vite frontend for the M0 milestone (code-based access, student pr
 with standalone organic map assets under `public/`. The roadmap lives in
 [`docs/roadmap.md`](docs/roadmap.md) and should guide all M0 feature work.
 
-## M0 focus (current milestone)
+## Milestones and history
 
-M0 delivers a minimal but secure foundation:
-
-- **Code-based access** for students and teachers (class codes, student codes, teacher codes).
-- **Progress storage** with clear role boundaries (students see their own; teachers see aggregates).
-- **Minimal teacher view** with coverage and weak topic insights.
-- **Role gating** for student vs. teacher routes.
-
-See the M0 task breakdown (T1–T4) in the roadmap for detailed scope and QA checks.
-
-Role gating uses a lightweight session storage flag (`chem.role`) that is set after a successful
-student join or teacher login. The teacher route and teacher-only UI are blocked when the role is
-`student`, keeping the M0 access boundary explicit without adding full auth state yet.
-
-## M0 T4 — Offline-first sync (local-first progress)
-
-**What changed**
-- Frontend API helpers now call edge functions (`/join`, `/load`, `/save`, `/teacher/report`).
-- Student sessions and progress are stored locally (`chem.sessionToken`, `chem.studentProfile`,
-  `chem.progress`, `chem.lastSyncAt`).
-- Teacher code is stored in session storage (`chem.teacherCode`) after a successful report fetch.
-- Background sync runs on the student route load and when the browser comes back online.
-
-**Why**
-- Aligns with the M0 roadmap T4 requirement for local-first progress storage and background sync
-  using `updated_at` conflict resolution.
-
-**How to verify**
-- Run the M0 test suite (see below).
-- Join a class and confirm local storage keys are populated in the browser.
-
-## M1 metadata completion — Structured metadata + fixed info blocks
-
-**What changed**
-- Reaction-map nodes now include `level`, `topic`, and `examTips`.
-  - `level` may be `AS`, `A2`, or `AS/A2` when a node spans both phase section tags.
-- Reaction-map links now include `conditions`, `mechanismSummary`, `quizData`, and `animationId`.
-- Map data files now expose `window.OrganicMapData` in browser runtime while keeping
-  CommonJS exports for Node-based test imports.
-- Map runtime now uses an explicit global script chain (`THREE` + `SpriteText` + `ForceGraph3D`)
-  with CDN fallback loading, while map logic remains isolated in `js/main.js`.
-- Map now includes a built-in local 3D canvas fallback renderer when `ForceGraph3D` cannot load
-  (for example, offline mode or blocked CDN access), so the map remains visible and navigable.
-- Nodes and links now include explicit `syllabusSections` tags (CIE 9701 section numbers).
-  - Node section tags are authored per node to keep AS/A2 separation intentional.
-- The map side panel includes fixed `What / How / Why / Exam tip` blocks with safe fallbacks.
-- Schema checks now enforce metadata quality across the full map:
-  - Every node must have non-fallback `topic` and at least one `examTip`.
-  - Every link must include `reagents`.
-  - Every non-structural reaction link must include valid `quizData` and `animationId`.
-  - Every node and link must include valid `syllabusSections`.
-  - M1 phase coverage targets are validated for sections `13-22` and `29-37`.
-  - No orphan nodes are allowed.
-
-**How to verify**
-- Run `node tests/m1-data-model.test.js`.
-- Run `node tests/m1-syllabus-coverage.test.js`.
-- Run `node tests/m1-chemistry-content.test.js`.
-- Open `/organic-map.html`, click a node or reaction link, and confirm all four info blocks populate.
-- In browser devtools, confirm `document.querySelector('#mynetwork canvas')` returns an element.
-
-## M2 kickoff — Mechanism animation player (first slice)
-
-**What changed**
-- Added a shared animation registry module at `public/js/animations.js` and `src/js/animations.js`.
-  - The registry is generated from `animationId` values in map links, with curated overrides for key mechanisms.
-- Added an embedded mechanism animation panel to the map sidebar with fixed IDs:
-  - `animationPanel`, `animationTitle`, `animationSummary`, `animationStep`, `animationSvg`, `animationPath`, `animationMarker`.
-- Updated map runtime to load `window.OrganicMapAnimations`, prepare per-link animation specs, and play a reusable SVG path animation.
-- Added explicit fallback behavior when animation metadata is missing:
-  - `No animation ID is attached to this pathway yet.`
-  - `No animation asset is registered for this pathway yet.`
-
-**Why**
-- Aligns with the roadmap M2 requirement for a reusable animation player + registry with graceful fallback behavior.
-
-**How to verify**
-- Run `node tests/m2-animation-player.test.js`.
-- Open `/organic-map.html`, click a reaction link, then click `Simulate Reaction`.
-- Confirm the sidebar animation panel updates title/summary/step text and animates the marker on the SVG path.
+- Milestone scope and acceptance checks: [`docs/roadmap.md`](docs/roadmap.md)
+- Implementation history and verification logs: [`docs/development-history.md`](docs/development-history.md)
 
 ## Project structure (M0 frontend)
 
