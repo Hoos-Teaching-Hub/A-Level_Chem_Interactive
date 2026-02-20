@@ -94,6 +94,69 @@ assertIncludesAll(
   'Map page embed wiring'
 );
 
+const mapHtmlContents = readText('public/organic-map.html');
+assertIncludesAll(
+  mapHtmlContents,
+  [
+    'id="viewModeBtn"',
+    'id="compoundExampleStructure"',
+    'id="compoundMechanismNav"',
+    'overflow-y-auto',
+    'sidebar-scroll',
+  ],
+  'Map sidebar usability additions',
+);
+assert.ok(
+  !mapHtmlContents.includes('id="compoundClass"'),
+  'Map sidebar should not render a separate class text block.',
+);
+assert.ok(
+  mapHtmlContents.includes('3d-force-graph@1.73.1/dist/3d-force-graph.min.js'),
+  'Map HTML should load the ForceGraph runtime from the expected CDN URL.',
+);
+assert.ok(
+  !mapHtmlContents.includes('build/three.min.js'),
+  'Map HTML should not hard-load a separate global THREE bundle.',
+);
+assert.ok(
+  !mapHtmlContents.includes('three-spritetext'),
+  'Map HTML should not load three-spritetext directly.',
+);
+
+const mapRuntimeContents = readText('public/js/main.js');
+assertIncludesAll(
+  mapRuntimeContents,
+  [
+    'viewModeBtn',
+    'numDimensions',
+    "graphViewMode === '2d'",
+    'nodeRelSize',
+    'setGraphViewMode',
+    'applyPersistentNodeLabels',
+    'TWO_D_FOCUS_DEPTH',
+    'targetPosition',
+    'Node click camera transition failed',
+    'focus2DPosition',
+    '2D node click focus failed',
+    'compoundMechanismNav',
+    'compoundExampleStructure',
+    'CH3-CH2-CH3',
+  ],
+  'Map runtime example/mechanism navigation wiring',
+);
+assert.ok(
+  !mapRuntimeContents.includes('.nodeThreeObject('),
+  'Map runtime should avoid custom nodeThreeObject rendering for compatibility.',
+);
+assert.ok(
+  !mapRuntimeContents.includes('Class:'),
+  'Map runtime should not render class text in labels/tooltips.',
+);
+assert.ok(
+  !mapRuntimeContents.includes('Chemical Compound • Class:'),
+  'Compound detail header should not include class text.',
+);
+
 // Session persistence should exist in the client and be wired into route gating.
 const roleStoreContents = readText('src/app/roleStore.ts');
 assertIncludesAll(

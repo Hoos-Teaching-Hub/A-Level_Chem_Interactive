@@ -25,6 +25,8 @@ assertIncludesAll(
     '`animationId`',
     '`durationMs`',
     '`steps`',
+    'atoms',
+    'bonds',
     'dipole',
     'lone pair',
     'electron movement',

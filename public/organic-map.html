@@ -50,11 +50,14 @@
     </div>
 
     <!-- Info/Control Panel -->
-    <div class="fixed top-4 right-4 w-full max-w-sm sm:w-96 glass-panel rounded-xl p-6 transition-all duration-300 transform z-10"
+    <div class="fixed top-4 right-4 w-full max-w-sm sm:w-96 max-h-[calc(100vh-2rem)] overflow-y-auto sidebar-scroll glass-panel rounded-xl p-6 transition-all duration-300 transform z-10"
         id="infoPanel">
         <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
             <h2 class="text-2xl font-bold text-white">Reaction Lab 3D</h2>
             <div class="flex gap-2">
+                <button id="viewModeBtn"
+                    class="px-2 py-1 bg-slate-700 rounded text-xs font-semibold text-white hover:bg-slate-600 chem-btn"
+                    type="button" aria-label="Toggle 2D/3D map view">2D</button>
                 <button onclick="resetCamera()"
                     class="p-2 bg-gray-700 rounded-full hover:bg-gray-600 chem-btn text-white" title="Reset Camera">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -104,19 +107,67 @@
                     <p id="animationTitle" class="text-sm font-semibold text-white mt-2"></p>
                     <p id="animationSummary" class="text-xs text-gray-300 mt-1"></p>
                     <div class="mt-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
-                        <svg id="animationSvg" viewBox="0 0 360 110" class="w-full h-20" aria-label="Mechanism animation">
+                        <canvas id="animationCanvas" width="360" height="180" class="w-full h-40 rounded bg-slate-950"
+                            aria-label="Mechanism animation canvas"></canvas>
+                        <svg id="animationSvg" viewBox="0 0 360 110" class="hidden w-full h-20" aria-label="Mechanism animation">
+                            <defs>
+                                <marker id="animationElectronArrowHead" markerWidth="8" markerHeight="8" refX="7"
+                                    refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="#fbbf24" />
+                                </marker>
+                            </defs>
                             <path id="animationPath" d="" fill="none" stroke="#7c3aed" stroke-width="4"
                                 stroke-linecap="round" />
+                            <g id="animationBondLayer"></g>
+                            <g id="animationAtomLayer"></g>
+                            <g id="animationDipoleLayer"></g>
+                            <g id="animationLonePairLayer"></g>
+                            <g id="animationElectronLayer"></g>
                             <circle id="animationMarker" cx="24" cy="84" r="6" fill="#e9d5ff" />
                         </svg>
+                    </div>
+                    <div class="mt-2 flex flex-col gap-2">
+                        <div id="animationTimelineRow" class="flex items-center gap-2">
+                            <button id="animationPlayBtn"
+                                class="h-8 w-8 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center justify-center"
+                                type="button" aria-label="Play mechanism animation">▶</button>
+                            <input id="animationProgress" type="range" min="0" max="100" value="0" step="0.1"
+                                class="flex-1 min-w-0 accent-sky-500" />
+                            <button id="animationResetBtn"
+                                class="h-8 w-8 rounded-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold flex items-center justify-center"
+                                type="button" aria-label="Reset mechanism animation">↺</button>
+                        </div>
+                        <div id="animationSpeedRow" class="flex flex-wrap items-center justify-end gap-2">
+                            <label for="animationSpeed" class="text-[10px] font-semibold uppercase tracking-wide text-slate-300">Speed</label>
+                            <select id="animationSpeed"
+                                class="h-8 w-20 sm:w-24 max-w-full rounded border border-slate-600 bg-slate-800 px-2 text-xs font-semibold text-slate-100">
+                                <option value="0.75">0.75x</option>
+                                <option value="1" selected>1x</option>
+                                <option value="1.25">1.25x</option>
+                                <option value="1.5">1.5x</option>
+                            </select>
+                        </div>
                     </div>
                     <p id="animationStep" class="text-xs text-purple-100 mt-2"></p>
                     <p id="animationFallback" class="hidden text-xs text-amber-200 mt-2"></p>
                 </div>
             </div>
 
-            <div id="compoundDetails" class="hidden">
-                <p id="compoundDesc" class="text-gray-300 leading-relaxed"></p>
+            <div id="compoundDetails" class="hidden space-y-3">
+                <div class="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">Description</span>
+                    <p id="compoundDesc" class="text-gray-300 leading-relaxed mt-1"></p>
+                </div>
+                <div class="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">Example Structure (>=3 C)</span>
+                    <p id="compoundExampleName" class="text-emerald-200 font-semibold mt-1"></p>
+                    <p id="compoundExampleStructure" class="text-emerald-100 font-mono text-sm mt-1"></p>
+                </div>
+                <div class="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">Mechanism Navigation</span>
+                    <div id="compoundMechanismNav" class="mt-2 grid gap-2"></div>
+                    <p id="compoundMechanismEmpty" class="hidden text-xs text-gray-400 mt-2">No linked mechanisms for this compound yet.</p>
+                </div>
             </div>
 
             <div class="mt-4 grid gap-3">
@@ -161,8 +212,8 @@
     </div>
 
     <script src="js/data.js?v=20260212c"></script>
-    <script src="js/animations.js?v=20260219a"></script>
-    <script src="js/main.js?v=20260212c"></script>
+    <script src="js/animations.js?v=20260219e"></script>
+    <script src="js/main.js?v=20260220d"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initMap === 'function') {

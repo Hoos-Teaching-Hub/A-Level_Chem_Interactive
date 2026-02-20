@@ -53,12 +53,24 @@ const mapHtml = readText('public/organic-map.html');
   'animationSvg',
   'animationPath',
   'animationMarker',
+  'animationCanvas',
+  'animationPlayBtn',
+  'animationProgress',
+  'animationTimelineRow',
+  'animationResetBtn',
+  'animationSpeed',
+  'animationSpeedRow',
 ].forEach((id) => {
   assert.ok(
     mapHtml.includes(`id="${id}"`),
     `Expected map sidebar animation element "${id}" to exist.`,
   );
 });
+
+assert.ok(
+  mapHtml.includes('flex-wrap'),
+  'Expected animation controls to allow wrapping on narrow sidebar widths.',
+);
 
 const srcMain = readText('src/js/main.js');
 const publicMain = readText('public/js/main.js');
@@ -73,6 +85,18 @@ const publicMain = readText('public/js/main.js');
   assert.ok(
     contents.includes('window.OrganicMapAnimations'),
     `Expected ${label} main.js to use the shared animation registry module.`,
+  );
+  assert.ok(
+    contents.includes('getContext(\'2d\')'),
+    `Expected ${label} main.js to use canvas rendering for mechanism animation.`,
+  );
+  assert.ok(
+    contents.includes('animationProgress'),
+    `Expected ${label} main.js to wire animation timeline controls.`,
+  );
+  assert.ok(
+    contents.includes('animationSpeed'),
+    `Expected ${label} main.js to wire animation speed controls.`,
   );
 });
 

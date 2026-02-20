@@ -70,6 +70,7 @@ Run the required structure and edge checks in order:
 node tests/paths.test.js
 node tests/structure.test.js
 node tests/m2-animation-standard.test.js
+node tests/m2-animation-visuals.test.js
 bash scripts/test-edge.sh
 ```
 
