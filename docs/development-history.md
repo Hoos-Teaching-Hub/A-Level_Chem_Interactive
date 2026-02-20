@@ -229,3 +229,19 @@ For scope and acceptance criteria, use the canonical roadmap in
 ### How to verify
 - Run `node --test tests/map-node-label-overlay.test.js`.
 - Open `/organic-map.html` and confirm each node label is persistently visible above the sphere in both 3D and 2D views.
+
+## M2 test reliability pass — harden local edge test startup script
+
+### What changed
+- Added bounded retry logic to `scripts/test-edge.sh` for `supabase start`.
+- Added pre-retry cleanup (`supabase stop --no-backup`) to avoid stale container conflicts
+  after partial or interrupted Supabase startup.
+- Added regression coverage in `tests/edge-test-script.test.js` for retry/cleanup wiring.
+
+### Why
+- Makes local and CI edge-function integration runs less fragile when Docker/Supabase startup
+  partially fails and leaves stale resources behind.
+
+### How to verify
+- Run `node --test tests/edge-test-script.test.js`.
+- Run `bash scripts/test-edge.sh` and confirm integration tests complete successfully.

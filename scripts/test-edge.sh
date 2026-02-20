@@ -1,8 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Start the full local Supabase stack (Docker services).
-supabase start >/dev/null
+retry_supabase_cmd() {
+  local label="$1"
+  shift
+  local attempts=3
+  local delay=5
+  local attempt=1
+
+  until "$@"; do
+    if [ "$attempt" -ge "$attempts" ]; then
+      echo "ERROR: ${label} failed after ${attempts} attempts."
+      return 1
+    fi
+    echo "WARN: ${label} failed on attempt ${attempt}; retrying in ${delay}s..."
+    # Ensure stale partially-started containers are cleaned up before retrying.
+    supabase stop --no-backup >/dev/null 2>&1 || true
+    sleep "$delay"
+    attempt=$((attempt + 1))
+    delay=$((delay * 2))
+  done
+}
+
+# Clean up stale containers and then start the full local Supabase stack.
+supabase stop --no-backup >/dev/null 2>&1 || true
+retry_supabase_cmd "supabase start" supabase start
 
 # Capture env-style status output and keep only KEY=VALUE lines.
 STATUS_ENV="$(
