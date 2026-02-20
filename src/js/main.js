@@ -83,7 +83,13 @@ let animationAtomLayerElem;
 let viewModeBtnElem;
 let graphViewMode = '3d';
 let forceGraphRuntimeErrorHandler = null;
+let mapContainerElem = null;
+let nodeLabelLayerElem = null;
+let nodeLabelFrameId = null;
+const nodeLabelElements = new Map();
 const TWO_D_FOCUS_DEPTH = 60;
+const NODE_LABEL_VERTICAL_OFFSET = { '2d': 14, '3d': 18 };
+const NODE_LABEL_VIEWPORT_MARGIN = 80;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -116,10 +122,193 @@ function getNodeLabelHtml(node) {
     return `<div><strong>${nodeName}</strong></div>`;
 }
 
+function stopPersistentNodeLabelLoop() {
+    if (nodeLabelFrameId !== null) {
+        window.cancelAnimationFrame(nodeLabelFrameId);
+        nodeLabelFrameId = null;
+    }
+}
+
+function clearPersistentNodeLabels() {
+    stopPersistentNodeLabelLoop();
+    nodeLabelElements.clear();
+    if (nodeLabelLayerElem && nodeLabelLayerElem.parentNode) {
+        nodeLabelLayerElem.parentNode.removeChild(nodeLabelLayerElem);
+    }
+    nodeLabelLayerElem = null;
+}
+
+function ensureNodeLabelLayer() {
+    if (!mapContainerElem) {
+        mapContainerElem = document.getElementById('mynetwork');
+    }
+    if (!mapContainerElem) {
+        return null;
+    }
+    if (nodeLabelLayerElem && nodeLabelLayerElem.parentNode === mapContainerElem) {
+        return nodeLabelLayerElem;
+    }
+    if (nodeLabelLayerElem && nodeLabelLayerElem.parentNode) {
+        nodeLabelLayerElem.parentNode.removeChild(nodeLabelLayerElem);
+    }
+
+    const layer = document.createElement('div');
+    layer.id = 'nodeLabelLayer';
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.position = 'absolute';
+    layer.style.inset = '0';
+    layer.style.pointerEvents = 'none';
+    layer.style.overflow = 'hidden';
+    layer.style.zIndex = '4';
+    mapContainerElem.appendChild(layer);
+    nodeLabelLayerElem = layer;
+    return layer;
+}
+
+function syncPersistentNodeLabelNodes() {
+    if (!Graph || !nodeLabelLayerElem || typeof Graph.graphData !== 'function') {
+        return [];
+    }
+
+    const graphData = Graph.graphData();
+    const nodes = graphData && Array.isArray(graphData.nodes) ? graphData.nodes : [];
+    const activeNodeIds = new Set();
+
+    nodes.forEach(node => {
+        if (!node || node.id === undefined || node.id === null) {
+            return;
+        }
+        const nodeId = String(node.id);
+        activeNodeIds.add(nodeId);
+
+        let labelElem = nodeLabelElements.get(nodeId);
+        if (!labelElem) {
+            labelElem = document.createElement('div');
+            labelElem.dataset.nodeId = nodeId;
+            labelElem.style.position = 'absolute';
+            labelElem.style.left = '0';
+            labelElem.style.top = '0';
+            labelElem.style.transform = 'translate(-50%, -50%)';
+            labelElem.style.whiteSpace = 'nowrap';
+            labelElem.style.pointerEvents = 'none';
+            labelElem.style.color = '#dbeafe';
+            labelElem.style.fontFamily = '"Segoe UI", sans-serif';
+            labelElem.style.fontWeight = '600';
+            labelElem.style.padding = '1px 4px';
+            labelElem.style.borderRadius = '4px';
+            labelElem.style.background = 'rgba(2, 6, 23, 0.55)';
+            labelElem.style.textShadow = '0 1px 3px rgba(2, 6, 23, 0.85)';
+            labelElem.style.opacity = '0.95';
+            labelElem.style.display = 'none';
+            nodeLabelLayerElem.appendChild(labelElem);
+            nodeLabelElements.set(nodeId, labelElem);
+        }
+        labelElem.innerText = node.name || nodeId;
+        labelElem.style.fontSize = graphViewMode === '2d' ? '10px' : '11px';
+    });
+
+    Array.from(nodeLabelElements.entries()).forEach(([nodeId, labelElem]) => {
+        if (activeNodeIds.has(nodeId)) {
+            return;
+        }
+        if (labelElem.parentNode) {
+            labelElem.parentNode.removeChild(labelElem);
+        }
+        nodeLabelElements.delete(nodeId);
+    });
+
+    return nodes;
+}
+
+function updatePersistentNodeLabels() {
+    if (!Graph || typeof Graph.graph2ScreenCoords !== 'function') {
+        return;
+    }
+    const layer = ensureNodeLabelLayer();
+    if (!layer) {
+        return;
+    }
+
+    const nodes = syncPersistentNodeLabelNodes();
+    const bounds = layer.getBoundingClientRect();
+    const yOffset = NODE_LABEL_VERTICAL_OFFSET[graphViewMode] || NODE_LABEL_VERTICAL_OFFSET['3d'];
+
+    nodes.forEach(node => {
+        if (!node || node.id === undefined || node.id === null) {
+            return;
+        }
+        const labelElem = nodeLabelElements.get(String(node.id));
+        if (!labelElem) {
+            return;
+        }
+
+        const nodeX = Number(node.x);
+        const nodeY = Number(node.y);
+        const nodeZ = Number.isFinite(Number(node.z)) ? Number(node.z) : 0;
+        if (!Number.isFinite(nodeX) || !Number.isFinite(nodeY)) {
+            labelElem.style.display = 'none';
+            return;
+        }
+
+        let projected;
+        try {
+            projected = Graph.graph2ScreenCoords(nodeX, nodeY, nodeZ);
+        } catch (error) {
+            labelElem.style.display = 'none';
+            return;
+        }
+        const screenX = Number(projected && projected.x);
+        const screenY = Number(projected && projected.y) - yOffset;
+        if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) {
+            labelElem.style.display = 'none';
+            return;
+        }
+
+        const outsideViewport =
+            screenX < -NODE_LABEL_VIEWPORT_MARGIN ||
+            screenX > bounds.width + NODE_LABEL_VIEWPORT_MARGIN ||
+            screenY < -NODE_LABEL_VIEWPORT_MARGIN ||
+            screenY > bounds.height + NODE_LABEL_VIEWPORT_MARGIN;
+        if (outsideViewport) {
+            labelElem.style.display = 'none';
+            return;
+        }
+
+        labelElem.style.display = 'block';
+        labelElem.style.left = `${screenX}px`;
+        labelElem.style.top = `${screenY}px`;
+    });
+}
+
+function startPersistentNodeLabelLoop() {
+    if (nodeLabelFrameId !== null) {
+        return;
+    }
+
+    const tick = () => {
+        updatePersistentNodeLabels();
+        if (!Graph || !nodeLabelLayerElem) {
+            nodeLabelFrameId = null;
+            return;
+        }
+        nodeLabelFrameId = window.requestAnimationFrame(tick);
+    };
+    nodeLabelFrameId = window.requestAnimationFrame(tick);
+}
+
 function applyPersistentNodeLabels() {
-    // Keep native ForceGraph node rendering to avoid cross-version THREE runtime
-    // crashes in browser/CDN combinations. Labels remain available via nodeLabel.
-    return false;
+    // Render labels in a DOM overlay that follows node screen projection so labels
+    // stay outside node balls without depending on custom THREE sprite rendering.
+    if (!Graph || typeof Graph.graph2ScreenCoords !== 'function') {
+        clearPersistentNodeLabels();
+        return false;
+    }
+    if (!ensureNodeLabelLayer()) {
+        return false;
+    }
+    updatePersistentNodeLabels();
+    startPersistentNodeLabelLoop();
+    return true;
 }
 
 function setViewModeButtonAvailability(isEnabled) {
@@ -226,6 +415,7 @@ function installForceGraphRuntimeErrorGuard(mapContainer) {
             console.warn('Could not pause ForceGraph animation cleanly.', pauseError);
         }
         Graph = null;
+        clearPersistentNodeLabels();
         setViewModeButtonAvailability(false);
         renderFallbackMap(mapContainer);
         showDefault();
@@ -1373,6 +1563,7 @@ function renderFallbackMap(container) {
     if (!container) {
         return;
     }
+    clearPersistentNodeLabels();
 
     if (fallbackCleanup) {
         fallbackCleanup();
@@ -1939,11 +2130,13 @@ function initMap() {
         showStartupError('Map container is missing from the page. Reload and try again.');
         return;
     }
+    mapContainerElem = mapContainer;
 
     // 2. Initialize 3D Graph.
     // ForceGraph3D is injected by the CDN script in index.html.
     if (typeof ForceGraph3D === 'undefined') {
         console.warn('Graph dependency failed to load (ForceGraph3D). Falling back to built-in 3D renderer.');
+        clearPersistentNodeLabels();
         setViewModeButtonAvailability(false);
         removeForceGraphRuntimeErrorGuard();
         renderFallbackMap(mapContainer);
@@ -2053,6 +2246,7 @@ function initMap() {
     } catch (error) {
         console.error('Graph renderer initialization failed.', error);
         console.warn('Falling back to built-in 3D renderer.');
+        clearPersistentNodeLabels();
         setViewModeButtonAvailability(false);
         removeForceGraphRuntimeErrorGuard();
         renderFallbackMap(mapContainer);
@@ -2065,6 +2259,7 @@ function initMap() {
     window.addEventListener('resize', () => {
         Graph.width(window.innerWidth);
         Graph.height(window.innerHeight);
+        updatePersistentNodeLabels();
     });
 }
 

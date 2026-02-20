@@ -212,3 +212,20 @@ For scope and acceptance criteria, use the canonical roadmap in
 - Run `node --test tests/legacy-map-bootstrap.test.js tests/legacy-map-cdn-fallback.test.js`.
 - Run `node --test tests/structure.test.js`.
 - Run `node --test tests/*.test.js`.
+## M2 map UX polish — persistent labels outside node spheres
+
+### What changed
+- Added a compatibility-safe DOM label overlay layer for the 3D/2D map (`nodeLabelLayer`) anchored by
+  `Graph.graph2ScreenCoords(...)`.
+- Labels now remain visible without hover and stay outside node balls using a vertical offset.
+- Label positions refresh continuously during camera movement and simulation updates.
+- Added cleanup hooks so label overlays are removed when the renderer falls back to the canvas map.
+- Added regression coverage in `tests/map-node-label-overlay.test.js`.
+
+### Why
+- Keeps node names consistently readable while avoiding text rendered inside spheres.
+- Preserves runtime stability by not reintroducing custom `nodeThreeObject`/Three-sprite dependencies.
+
+### How to verify
+- Run `node --test tests/map-node-label-overlay.test.js`.
+- Open `/organic-map.html` and confirm each node label is persistently visible above the sphere in both 3D and 2D views.
