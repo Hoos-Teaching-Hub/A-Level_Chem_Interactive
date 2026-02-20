@@ -69,10 +69,26 @@ Run the required structure and edge checks in order:
 ```sh
 node tests/paths.test.js
 node tests/structure.test.js
+node tests/visual-smoke.test.js
 node tests/m2-animation-standard.test.js
 node tests/m2-animation-visuals.test.js
 bash scripts/test-edge.sh
 ```
+
+Run browser-based visual smoke confirmation for the map:
+
+```sh
+npx playwright install chromium
+npm run test:visual
+```
+
+For repeated local reruns (skip rebuild):
+
+```sh
+npm run test:visual:fast
+```
+
+Screenshots are written to `artifacts/visual/`.
 
 ## Environment configuration
 

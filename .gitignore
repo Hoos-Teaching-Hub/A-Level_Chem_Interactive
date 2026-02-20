@@ -30,6 +30,7 @@ pnpm-debug.log*
 
 # Test coverage / reports
 coverage/
+artifacts/visual/
 
 # Lint / tooling caches
 .eslintcache

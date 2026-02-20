@@ -7,8 +7,10 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "node tests/paths.test.js && node tests/structure.test.js && node tests/m2-animation-standard.test.js && node tests/m2-animation-visuals.test.js && bash scripts/test-edge.sh",
+    "test": "node tests/paths.test.js && node tests/structure.test.js && node tests/visual-smoke.test.js && node tests/m2-animation-standard.test.js && node tests/m2-animation-visuals.test.js && bash scripts/test-edge.sh",
     "test:edge": "bash scripts/test-edge.sh",
+    "test:visual": "npm run build && node scripts/visual-smoke.js",
+    "test:visual:fast": "node scripts/visual-smoke.js",
     "verify:local": "node tests/paths.test.js && npm run build && bash scripts/test-edge.sh"
   },
   "dependencies": {
@@ -26,6 +28,7 @@
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "playwright": "^1.58.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.2",
