@@ -18,7 +18,8 @@
                 "x": 148,
                 "y": 60,
                 "label": "C",
-                "step": null
+                "step": null,
+                "endStep": 0
             },
             {
                 "id": "c2",
@@ -32,14 +33,16 @@
                 "x": 128,
                 "y": 40,
                 "label": "O",
-                "step": null
+                "step": null,
+                "endStep": 1
             },
             {
                 "id": "h",
                 "x": 164,
                 "y": 22,
                 "label": "H",
-                "step": null
+                "step": null,
+                "endStep": 1
             },
             {
                 "id": "bh",
@@ -47,6 +50,23 @@
                 "y": 58,
                 "label": "B:",
                 "step": null
+            },
+            {
+                "id": "c1",
+                "x": 148,
+                "y": 60,
+                "label": "C",
+                "charge": 1,
+                "step": 1,
+                "endStep": 1
+            },
+            {
+                "id": "c1",
+                "x": 148,
+                "y": 60,
+                "label": "C",
+                "charge": 0,
+                "step": 2
             }
         ],
         "bonds": [
@@ -60,19 +80,22 @@
                 "from": "c1",
                 "to": "o",
                 "order": 1,
-                "step": 0
+                "step": 0,
+                "endStep": 0
             },
             {
                 "from": "o",
                 "to": "h",
                 "order": 1,
-                "step": 0
+                "step": 0,
+                "endStep": 0
             },
             {
                 "from": "c1",
                 "to": "c2",
                 "order": 1,
-                "step": 1
+                "step": 1,
+                "endStep": 1
             },
             {
                 "from": "c1",
@@ -130,6 +153,70 @@
                 "label": "C-H -> C=C",
                 "step": 2,
                 "bend": 1.3
+            }
+        ],
+        "stepSemantics": [
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": ":O -> H+",
+                        "arrowType": "pair"
+                    }
+                ],
+                "invariants": [
+                    "oxygen protonation activates leaving group"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "bondBreak",
+                        "from": "c1",
+                        "to": "o"
+                    },
+                    {
+                        "type": "intermediate",
+                        "species": "carbocation",
+                        "atomId": "c1"
+                    },
+                    {
+                        "type": "chargeSet",
+                        "atomId": "c1",
+                        "charge": 1
+                    }
+                ],
+                "invariants": [
+                    "water leaves to form carbocation intermediate"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": ":B -> beta-H",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "arrow",
+                        "label": "C-H -> C=C",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "bondForm",
+                        "from": "c1",
+                        "to": "c2",
+                        "order": 2
+                    },
+                    {
+                        "type": "chargeSet",
+                        "atomId": "c1",
+                        "charge": 0
+                    }
+                ],
+                "invariants": [
+                    "deprotonation regenerates alkene and neutral center"
+                ]
             }
         ]
     },
@@ -394,6 +481,103 @@
                 "endStep": 3,
                 "bend": 1.5
             }
+        ],
+        "stepSemantics": [
+            {
+                "events": [
+                    {
+                        "type": "role",
+                        "atomId": "c1",
+                        "role": "electrophile-target"
+                    },
+                    {
+                        "type": "role",
+                        "atomId": "x",
+                        "role": "leaving-group"
+                    }
+                ],
+                "invariants": [
+                    "reactant alkene and polarized H-X present"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "pi e- -> H",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "arrow",
+                        "label": "H-Br -> Br",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "hR",
+                        "to": "x"
+                    }
+                ],
+                "invariants": [
+                    "heterolytic H-X cleavage occurs with pi attack"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "chargeSet",
+                        "atomId": "c1",
+                        "charge": 1
+                    },
+                    {
+                        "type": "chargeSet",
+                        "atomId": "x",
+                        "charge": -1
+                    },
+                    {
+                        "type": "intermediate",
+                        "species": "carbocation",
+                        "atomId": "c1"
+                    }
+                ],
+                "invariants": [
+                    "carbocation intermediate is present before nucleophile attack"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "Br: -> +",
+                        "arrowType": "pair"
+                    }
+                ],
+                "invariants": [
+                    "bromide lone pair attacks carbocation"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "bondForm",
+                        "from": "c1",
+                        "to": "x"
+                    },
+                    {
+                        "type": "chargeSet",
+                        "atomId": "c1",
+                        "charge": 0
+                    },
+                    {
+                        "type": "chargeSet",
+                        "atomId": "x",
+                        "charge": 0
+                    }
+                ],
+                "invariants": [
+                    "final product neutralized after bond formation"
+                ]
+            }
         ]
     },
     "free-radical-substitution": {
@@ -445,6 +629,14 @@
                 "y": 44,
                 "label": "H",
                 "step": null
+            },
+            {
+                "id": "x",
+                "x": 318,
+                "y": 40,
+                "label": "X",
+                "charge": -1,
+                "step": 2
             }
         ],
         "bonds": [
@@ -452,7 +644,8 @@
                 "from": "c",
                 "to": "x",
                 "order": 1,
-                "step": 0
+                "step": 0,
+                "endStep": 1
             },
             {
                 "from": "o",
@@ -464,7 +657,7 @@
                 "from": "c",
                 "to": "o",
                 "order": 1,
-                "step": 2
+                "step": 1
             }
         ],
         "dipoles": [
@@ -495,6 +688,54 @@
                 "label": "C-X -> X",
                 "step": 1,
                 "bend": 1.35
+            }
+        ],
+        "stepSemantics": [
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": ":OH- -> C",
+                        "arrowType": "pair"
+                    }
+                ],
+                "invariants": [
+                    "nucleophile approaches electrophilic carbon"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "C-X -> X",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "c",
+                        "to": "x"
+                    },
+                    {
+                        "type": "bondForm",
+                        "from": "c",
+                        "to": "o"
+                    }
+                ],
+                "invariants": [
+                    "SN2 concerted substitution: forming and breaking bonds together"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "chargeSet",
+                        "atomId": "x",
+                        "charge": -1
+                    }
+                ],
+                "invariants": [
+                    "leaving group exits as halide anion"
+                ]
             }
         ]
     },
@@ -612,6 +853,54 @@
                 "step": 1,
                 "bend": 1.35
             }
+        ],
+        "stepSemantics": [
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": ":NH3 -> C",
+                        "arrowType": "pair"
+                    }
+                ],
+                "invariants": [
+                    "amine lone pair initiates nucleophilic attack"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "C-X -> X-",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "c",
+                        "to": "x"
+                    }
+                ],
+                "invariants": [
+                    "leaving group departure accompanies substitution"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "bondForm",
+                        "from": "c",
+                        "to": "n"
+                    },
+                    {
+                        "type": "chargeSet",
+                        "atomId": "x",
+                        "charge": -1
+                    }
+                ],
+                "invariants": [
+                    "substitution product formed with halide leaving group"
+                ]
+            }
         ]
     },
     "halo-to-nitrile-nuc-sub": {
@@ -727,6 +1016,54 @@
                 "label": "C-X -> X-",
                 "step": 1,
                 "bend": 1.35
+            }
+        ],
+        "stepSemantics": [
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": ":CN- -> C",
+                        "arrowType": "pair"
+                    }
+                ],
+                "invariants": [
+                    "cyanide lone pair attacks electrophilic carbon"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "C-X -> X-",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "c",
+                        "to": "x"
+                    }
+                ],
+                "invariants": [
+                    "leaving group departs during substitution"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "bondForm",
+                        "from": "c",
+                        "to": "cN"
+                    },
+                    {
+                        "type": "chargeSet",
+                        "atomId": "x",
+                        "charge": -1
+                    }
+                ],
+                "invariants": [
+                    "chain extension via nitrile bond formation"
+                ]
             }
         ]
     },
@@ -851,6 +1188,65 @@
                 "step": 1,
                 "bend": 1.35
             }
+        ],
+        "stepSemantics": [
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": ":B -> beta-H",
+                        "arrowType": "pair"
+                    }
+                ],
+                "invariants": [
+                    "base aligns with beta-hydrogen"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "C-H -> C=C",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "arrow",
+                        "label": "C-X -> X-",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "c1",
+                        "to": "hB"
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "c2",
+                        "to": "x"
+                    },
+                    {
+                        "type": "bondForm",
+                        "from": "c1",
+                        "to": "c2",
+                        "order": 2
+                    }
+                ],
+                "invariants": [
+                    "E2 elimination: proton abstraction and leaving-group departure"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "chargeSet",
+                        "atomId": "x",
+                        "charge": -1
+                    }
+                ],
+                "invariants": [
+                    "alkene product with halide anion formed"
+                ]
+            }
         ]
     },
     "ketone-reduction": {
@@ -919,6 +1315,14 @@
                 "y": 20,
                 "label": "H",
                 "step": 2
+            },
+            {
+                "id": "o",
+                "x": 150,
+                "y": 42,
+                "label": "O",
+                "charge": -1,
+                "step": 1
             }
         ],
         "bonds": [
@@ -988,8 +1392,72 @@
             {
                 "path": "M 148 40 C 186 6, 244 4, 286 36",
                 "label": "O: -> H+",
-                "step": 1,
+                "step": 2,
                 "bend": 1.35
+            }
+        ],
+        "stepSemantics": [
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "H- -> C=O carbon",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "arrow",
+                        "label": "pi -> O",
+                        "arrowType": "pair"
+                    }
+                ],
+                "invariants": [
+                    "hydride attack and pi-shift initiate reduction"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "chargeSet",
+                        "atomId": "o",
+                        "charge": -1
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "c",
+                        "to": "o",
+                        "order": 2
+                    },
+                    {
+                        "type": "bondForm",
+                        "from": "c",
+                        "to": "hyd"
+                    }
+                ],
+                "invariants": [
+                    "alkoxide intermediate forms after hydride addition"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "O: -> H+",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "bondForm",
+                        "from": "o",
+                        "to": "hp"
+                    },
+                    {
+                        "type": "chargeSet",
+                        "atomId": "o",
+                        "charge": 0
+                    }
+                ],
+                "invariants": [
+                    "protonation yields neutral secondary alcohol"
+                ]
             }
         ]
     },
@@ -1119,6 +1587,65 @@
                 "label": "O-H -> O",
                 "step": 1,
                 "bend": 1.35
+            }
+        ],
+        "stepSemantics": [
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": ":O -> H",
+                        "arrowType": "pair"
+                    }
+                ],
+                "invariants": [
+                    "oxygen lone pair engages proton transfer"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "arrow",
+                        "label": "C-H -> O",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "arrow",
+                        "label": "O-H -> O",
+                        "arrowType": "pair"
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "c",
+                        "to": "hA"
+                    },
+                    {
+                        "type": "bondBreak",
+                        "from": "o",
+                        "to": "hO"
+                    },
+                    {
+                        "type": "bondForm",
+                        "from": "c",
+                        "to": "o",
+                        "order": 2
+                    }
+                ],
+                "invariants": [
+                    "dehydrogenation and carbonyl formation proceed together"
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "type": "chargeSet",
+                        "atomId": "o",
+                        "charge": 0
+                    }
+                ],
+                "invariants": [
+                    "aldehyde product is neutral after oxidation"
+                ]
             }
         ]
     }

@@ -55,6 +55,15 @@ const CURATED_MECHANISM_EXPECTED_LONE_PAIRS = {
   'alcohol-dehydration': [':O', ':B'],
 };
 
+const CURATED_MECHANISM_EXPECTED_SEMANTIC_EVENTS = {
+  'alkene-hx-addition': ['bondBreak:hR-x', 'chargeSet:c1:1', 'bondForm:c1-x'],
+  'halo-to-alcohol-substitution': ['bondBreak:c-x', 'bondForm:c-o', 'chargeSet:x:-1'],
+  'haloalkane-elimination': ['bondBreak:c2-x', 'bondForm:c1-c2', 'chargeSet:x:-1'],
+  'primary-alcohol-oxidation': ['bondBreak:c-hA', 'bondForm:c-o', 'chargeSet:o:0'],
+  'ketone-reduction': ['chargeSet:o:-1', 'bondForm:o-hp', 'chargeSet:o:0'],
+  'alcohol-dehydration': ['bondBreak:c1-o', 'chargeSet:c1:1', 'bondForm:c1-c2'],
+};
+
 const MIN_ATOM_DISTANCE_PX = 16;
 const MIN_EFFECTIVE_BEND_PX = 3.5;
 
@@ -173,6 +182,42 @@ const clampBendFactor = (value) => {
     return 1;
   }
   return Math.max(0.5, Math.min(4, numeric));
+};
+
+const createMockCanvasState = (width = 480, height = 240, dpr = 1) => {
+  const scaleCalls = [];
+  const gradient = { addColorStop: () => {} };
+  const ctx = {
+    save: () => {},
+    restore: () => {},
+    setTransform: () => {},
+    clearRect: () => {},
+    translate: () => {},
+    scale: (x, y) => scaleCalls.push([x, y]),
+    createLinearGradient: () => gradient,
+    fillRect: () => {},
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    bezierCurveTo: () => {},
+    closePath: () => {},
+    arc: () => {},
+    fill: () => {},
+    stroke: () => {},
+    setLineDash: () => {},
+    fillText: () => {},
+  };
+  return {
+    scaleCalls,
+    syncCanvas: () => ({
+      ctx,
+      width,
+      height,
+      dpr,
+      pixelWidth: Math.round(width * dpr),
+      pixelHeight: Math.round(height * dpr),
+    }),
+  };
 };
 
 const assertAtomSpacing = (entry, label, animationId) => {
@@ -380,6 +425,40 @@ const assertMechanismSpecificCues = (entry, label, animationId) => {
   }
 };
 
+const assertMechanismSemantics = (entry, label, animationId) => {
+  const expectedEvents = CURATED_MECHANISM_EXPECTED_SEMANTIC_EVENTS[animationId] || [];
+  if (!expectedEvents.length) {
+    return;
+  }
+
+  assert.ok(
+    Array.isArray(entry.stepSemantics) && entry.stepSemantics.length === entry.steps.length,
+    `${label} animation "${animationId}" must define stepSemantics aligned with steps.`,
+  );
+
+  const presentEvents = new Set();
+  entry.stepSemantics.forEach((stepSemantics) => {
+    const events = Array.isArray(stepSemantics && stepSemantics.events) ? stepSemantics.events : [];
+    events.forEach((event) => {
+      if (!event || typeof event !== 'object') {
+        return;
+      }
+      if (event.type === 'bondBreak' || event.type === 'bondForm') {
+        presentEvents.add(`${event.type}:${event.from}-${event.to}`);
+      } else if (event.type === 'chargeSet') {
+        presentEvents.add(`chargeSet:${event.atomId}:${event.charge}`);
+      }
+    });
+  });
+
+  expectedEvents.forEach((eventKey) => {
+    assert.ok(
+      presentEvents.has(eventKey),
+      `${label} animation "${animationId}" is missing semantic event "${eventKey}".`,
+    );
+  });
+};
+
 const assertRegistryVisualCues = (label, gData, buildAnimationRegistry) => {
   const registry = buildAnimationRegistry(gData.links);
   CURATED_MECHANISM_IDS.forEach((animationId) => {
@@ -389,6 +468,7 @@ const assertRegistryVisualCues = (label, gData, buildAnimationRegistry) => {
     assertAtomSpacing(entry, label, animationId);
     assertElectronArrowBend(entry, label, animationId);
     assertMechanismSpecificCues(entry, label, animationId);
+    assertMechanismSemantics(entry, label, animationId);
     if (animationId === 'alkene-hx-addition') {
       assertElectrophilicArrowTargetsBromine(entry, label);
       assertElectrophilicChargeMarkerStyle(entry, label);
@@ -410,6 +490,14 @@ const assertRendererFitSampling = (label, renderer) => {
   assert.ok(
     renderer && typeof renderer.buildContentFitTransform === 'function',
     `${label} mechanism canvas renderer should expose buildContentFitTransform for bounded scaling.`,
+  );
+  assert.ok(
+    renderer && typeof renderer.fitContain === 'function',
+    `${label} mechanism canvas renderer should expose fitContain for stable aspect-preserving viewport transforms.`,
+  );
+  assert.ok(
+    renderer && typeof renderer.validateMechanismDefinition === 'function',
+    `${label} mechanism canvas renderer should expose validateMechanismDefinition for dev fail-fast checks.`,
   );
 
   const parsed = renderer.parseCubicPath('M 108 82 C -420 -360, 540 420, 176 40');
@@ -465,6 +553,115 @@ const assertRendererFitSampling = (label, renderer) => {
   assert.ok(
     fitTransform.scale >= 0.75 && fitTransform.scale <= 2.4,
     `${label} mechanism canvas renderer fit scale should stay within configured limits.`,
+  );
+
+  const contain = renderer.fitContain(900, 300, 360, 180);
+  assert.strictEqual(contain.scale, 300 / 180, `${label} fitContain should use contain scaling by the limiting axis.`);
+  assert.strictEqual(contain.drawW, 600, `${label} fitContain should compute bounded draw width.`);
+  assert.strictEqual(contain.drawH, 300, `${label} fitContain should compute bounded draw height.`);
+  assert.strictEqual(contain.offsetX, 150, `${label} fitContain should center content horizontally.`);
+  assert.strictEqual(contain.offsetY, 0, `${label} fitContain should center content vertically when already full-height.`);
+
+  const mechanismForCache = {
+    id: 'cache-contract',
+    steps: ['one', 'two'],
+    atoms: [
+      { id: 'a', x: 40, y: 90, label: 'C', step: 0 },
+      { id: 'b', x: 120, y: 90, label: 'C', step: 0 },
+      { id: 'a', x: 220, y: 90, label: 'C', step: 1 },
+      { id: 'b', x: 300, y: 90, label: 'C', step: 1 },
+    ],
+    bonds: [
+      { from: 'a', to: 'b', order: 1, step: 0 },
+      { from: 'a', to: 'b', order: 1, step: 1 },
+    ],
+    dipoles: [],
+    lonePairs: [],
+    electronMovement: [],
+  };
+
+  const viewportCanvas = createMockCanvasState(540, 240, 1);
+  renderer.drawMechanismCanvasFrame(mechanismForCache, 0.2, {
+    syncCanvas: viewportCanvas.syncCanvas,
+    fitToContent: false,
+  });
+  assert.ok(
+    viewportCanvas.scaleCalls.length > 0,
+    `${label} renderer should apply a viewport scale transform.`,
+  );
+  assert.strictEqual(
+    viewportCanvas.scaleCalls[0][0],
+    viewportCanvas.scaleCalls[0][1],
+    `${label} default viewport scaling must remain uniform (no stretching).`,
+  );
+
+  const stretchedCanvas = createMockCanvasState(540, 240, 1);
+  renderer.drawMechanismCanvasFrame(mechanismForCache, 0.2, {
+    syncCanvas: stretchedCanvas.syncCanvas,
+    fitToContent: false,
+    stretchToFill: true,
+  });
+  assert.notStrictEqual(
+    stretchedCanvas.scaleCalls[0][0],
+    stretchedCanvas.scaleCalls[0][1],
+    `${label} non-uniform viewport scaling should only occur when stretchToFill is explicitly enabled.`,
+  );
+
+  const cachedCanvas = createMockCanvasState(540, 240, 1);
+  const cachedFirst = renderer.drawMechanismCanvasFrame(mechanismForCache, 0.05, {
+    syncCanvas: cachedCanvas.syncCanvas,
+    fitToContent: true,
+    preserveAspect: true,
+    fitScope: 'mechanism',
+    padding: 24,
+  });
+  const cachedSecond = renderer.drawMechanismCanvasFrame(mechanismForCache, 0.95, {
+    syncCanvas: cachedCanvas.syncCanvas,
+    fitToContent: true,
+    preserveAspect: true,
+    fitScope: 'mechanism',
+    padding: 24,
+  });
+  assert.deepStrictEqual(
+    cachedFirst.fitTransform,
+    cachedSecond.fitTransform,
+    `${label} mechanism-scope fit transform should stay stable across scrub/play progress.`,
+  );
+
+  const stepCanvas = createMockCanvasState(540, 240, 1);
+  const stepFirst = renderer.drawMechanismCanvasFrame(mechanismForCache, 0.05, {
+    syncCanvas: stepCanvas.syncCanvas,
+    fitToContent: true,
+    preserveAspect: true,
+    fitScope: 'step',
+    padding: 24,
+  });
+  const stepSecond = renderer.drawMechanismCanvasFrame(mechanismForCache, 0.95, {
+    syncCanvas: stepCanvas.syncCanvas,
+    fitToContent: true,
+    preserveAspect: true,
+    fitScope: 'step',
+    padding: 24,
+  });
+  assert.notDeepStrictEqual(
+    stepFirst.fitTransform,
+    stepSecond.fitTransform,
+    `${label} step-scope fit transform should be allowed to change per step.`,
+  );
+
+  assert.throws(
+    () =>
+      renderer.validateMechanismDefinition({
+        id: 'invalid-definition',
+        steps: ['x'],
+        atoms: [{ id: 'a', x: 10, y: 10, label: 'C' }],
+        bonds: [{ from: 'a', to: 'missing', order: 1 }],
+        dipoles: [],
+        lonePairs: [],
+        electronMovement: [],
+      }),
+    /unknown atoms/,
+    `${label} validator should fail fast when bond endpoints reference missing atoms.`,
   );
 };
 

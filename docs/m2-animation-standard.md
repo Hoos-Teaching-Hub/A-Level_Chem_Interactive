@@ -22,6 +22,11 @@ Each animation must be assigned one tier.
 - Keep animation readable on laptop screens and avoid very dense overlays.
 - Show a minimal structural scaffold for curated mechanisms:
   - atoms and bonds must be visible so electron movement is anchored to structure.
+- Use one shared renderer implementation:
+  - `src/js/mechanism-canvas-renderer.js` is the source of truth and `public/js/mechanism-canvas-renderer.js` must stay byte-identical via sync script.
+- Preview and map canvases must keep a fixed `2:1` aspect container with `w-full h-full` canvas sizing.
+- Default canvas fitting must preserve aspect ratio:
+  - non-uniform scaling is allowed only when an explicit stretch option is enabled.
 - Show bond polarity when relevant:
   - Include dipole markers (`δ+` / `δ−`) on polarized bonds that drive mechanism choice.
 - Show lone pair sources:
@@ -71,6 +76,8 @@ Quality expectations:
 - Missing `animationId` or unknown registry key must trigger explicit fallback text.
 - Curated atom coordinates must avoid atom-circle overlap at any step.
 - Electron-flow arrows must be visibly curved (not nearly straight).
+- `fitToContent` should be stable during playback:
+  - fit transform is cached per mechanism unless a step-scoped fit mode is explicitly requested.
 
 ## 5) QA Gates
 

@@ -66,7 +66,9 @@
                         </select>
                     </div>
                     <div class="mt-3 rounded border border-slate-700 bg-slate-950 p-2">
-                        <canvas id="previewCanvas" width="360" height="180" class="h-56 w-full rounded bg-slate-950 md:h-64"></canvas>
+                        <div class="w-full aspect-[2/1]">
+                            <canvas id="previewCanvas" width="360" height="180" class="w-full h-full rounded bg-slate-950"></canvas>
+                        </div>
                     </div>
                     <div class="mt-2 flex items-center gap-2">
                         <label for="previewProgress"
@@ -107,22 +109,6 @@
                 canvasRenderer && typeof canvasRenderer.getActiveStepIndex === 'function'
                     ? canvasRenderer.getActiveStepIndex
                     : null;
-            const parseCubicPath =
-                canvasRenderer && typeof canvasRenderer.parseCubicPath === 'function'
-                    ? canvasRenderer.parseCubicPath
-                    : null;
-            const applyArrowBend =
-                canvasRenderer && typeof canvasRenderer.applyArrowBend === 'function'
-                    ? canvasRenderer.applyArrowBend
-                    : null;
-            const sampleCurvePoints =
-                canvasRenderer && typeof canvasRenderer.sampleCurvePoints === 'function'
-                    ? canvasRenderer.sampleCurvePoints
-                    : null;
-            const collectMechanismPoints =
-                canvasRenderer && typeof canvasRenderer.collectMechanismPoints === 'function'
-                    ? canvasRenderer.collectMechanismPoints
-                    : null;
 
             const animationIds = Object.keys(definitions).sort();
 
@@ -145,14 +131,15 @@
             const renderOptions = {
                 fitToContent: true,
                 preserveAspect: true,
+                stretchToFill: false,
+                fitScope: 'mechanism',
                 strictStepCues: true,
-                fitMargin: 24,
+                padding: 24,
                 fitTopInset: 18,
                 fitBottomInset: 20,
                 fitMinScale: 0.82,
                 fitMaxScale: 3.6,
                 fitArrowSamples: 18,
-                stabilizeFitByDefinition: true,
             };
 
             let currentAnimationId = null;
@@ -162,22 +149,7 @@
             let rafId = null;
             let isPlaying = false;
             let cycleStart = 0;
-            const definitionFitEnvelopeCache = new WeakMap();
-
-            function inferAtomType(label) {
-                const normalized = String(label || '').trim().toUpperCase();
-                if (!normalized) {
-                    return 'C';
-                }
-                if (normalized.startsWith('BR')) return 'Br';
-                if (normalized.startsWith('CL')) return 'Cl';
-                if (normalized.startsWith('O')) return 'O';
-                if (normalized.startsWith('N')) return 'N';
-                if (normalized === 'H' || normalized.startsWith('H+')) return 'H';
-                if (normalized.startsWith('B')) return 'B';
-                if (normalized.includes('CH') || normalized.includes('ET') || normalized.length > 2) return 'Group';
-                return 'C';
-            }
+            let previewCanvasMetrics = null;
 
             function buildStepMilestones(steps) {
                 const list = Array.isArray(steps) && steps.length > 0 ? steps : ['Mechanism step preview.'];
@@ -192,174 +164,6 @@
                         end,
                     };
                 });
-            }
-
-            function buildEnvelopeFromPoints(points) {
-                if (!Array.isArray(points) || points.length < 2) {
-                    return null;
-                }
-                let minX = Infinity;
-                let maxX = -Infinity;
-                let minY = Infinity;
-                let maxY = -Infinity;
-
-                points.forEach(point => {
-                    if (!point) {
-                        return;
-                    }
-                    const x = Number(point.x);
-                    const y = Number(point.y);
-                    if (!Number.isFinite(x) || !Number.isFinite(y)) {
-                        return;
-                    }
-                    minX = Math.min(minX, x);
-                    maxX = Math.max(maxX, x);
-                    minY = Math.min(minY, y);
-                    maxY = Math.max(maxY, y);
-                });
-
-                if (!Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minY) || !Number.isFinite(maxY)) {
-                    return null;
-                }
-
-                return { minX, maxX, minY, maxY };
-            }
-
-            function mergeEnvelopes(primaryEnvelope, secondaryEnvelope) {
-                if (!primaryEnvelope && !secondaryEnvelope) {
-                    return null;
-                }
-                if (!primaryEnvelope) {
-                    return secondaryEnvelope;
-                }
-                if (!secondaryEnvelope) {
-                    return primaryEnvelope;
-                }
-                return {
-                    minX: Math.min(primaryEnvelope.minX, secondaryEnvelope.minX),
-                    maxX: Math.max(primaryEnvelope.maxX, secondaryEnvelope.maxX),
-                    minY: Math.min(primaryEnvelope.minY, secondaryEnvelope.minY),
-                    maxY: Math.max(primaryEnvelope.maxY, secondaryEnvelope.maxY),
-                };
-            }
-
-            function getDefinitionFitEnvelope(definition) {
-                if (!definition || typeof definition !== 'object') {
-                    return null;
-                }
-                if (definitionFitEnvelopeCache.has(definition)) {
-                    return definitionFitEnvelopeCache.get(definition);
-                }
-
-                const atoms = Array.isArray(definition.atoms) ? definition.atoms : [];
-                const dipoles = Array.isArray(definition.dipoles) ? definition.dipoles : [];
-                const lonePairs = Array.isArray(definition.lonePairs) ? definition.lonePairs : [];
-                const electronMovement = Array.isArray(definition.electronMovement) ? definition.electronMovement : [];
-
-                let points = [];
-                if (collectMechanismPoints) {
-                    points = collectMechanismPoints(atoms, dipoles, lonePairs, electronMovement, {
-                        fitArrowSamples: renderOptions.fitArrowSamples,
-                    });
-                } else {
-                    const pushPoint = (x, y) => {
-                        const px = Number(x);
-                        const py = Number(y);
-                        if (Number.isFinite(px) && Number.isFinite(py)) {
-                            points.push({ x: px, y: py });
-                        }
-                    };
-
-                    atoms.forEach(atom => pushPoint(atom && atom.x, atom && atom.y));
-                    dipoles.forEach(cue => pushPoint(cue && cue.x, cue && cue.y));
-                    lonePairs.forEach(cue => pushPoint(cue && cue.x, cue && cue.y));
-                    electronMovement.forEach(cue => {
-                        if (!parseCubicPath || !applyArrowBend) {
-                            return;
-                        }
-                        const parsed = parseCubicPath(cue && cue.path);
-                        const curve = applyArrowBend(parsed, cue && cue.bend);
-                        if (!curve) {
-                            return;
-                        }
-                        if (sampleCurvePoints) {
-                            sampleCurvePoints(curve, renderOptions.fitArrowSamples).forEach(point => {
-                                pushPoint(point.x, point.y);
-                            });
-                            return;
-                        }
-                        for (let sample = 0; sample <= 14; sample += 1) {
-                            const t = sample / 14;
-                            const point = cubicPoint(curve, t);
-                            pushPoint(point.x, point.y);
-                        }
-                    });
-                }
-
-                const envelope = buildEnvelopeFromPoints(points);
-                definitionFitEnvelopeCache.set(definition, envelope);
-                return envelope;
-            }
-
-            function selectStepScopedCues(cues, stepIndex) {
-                if (!Array.isArray(cues)) {
-                    return [];
-                }
-                return cues.filter(cue => {
-                    if (!cue) {
-                        return false;
-                    }
-                    const cueStep = cue.step === null || cue.step === undefined ? null : Number(cue.step);
-                    const cueEndStep = cue.endStep === null || cue.endStep === undefined ? null : Number(cue.endStep);
-
-                    if (cueStep === null) {
-                        if (cueEndStep !== null && Number.isFinite(cueEndStep) && stepIndex > cueEndStep) {
-                            return false;
-                        }
-                        return true;
-                    }
-
-                    if (!Number.isFinite(cueStep) || cueStep !== stepIndex) {
-                        return false;
-                    }
-
-                    if (cueEndStep !== null && Number.isFinite(cueEndStep) && stepIndex > cueEndStep) {
-                        return false;
-                    }
-                    return true;
-                });
-            }
-
-            function cubicPoint(path, t) {
-                const mt = 1 - t;
-                const mt2 = mt * mt;
-                const t2 = t * t;
-                return {
-                    x:
-                        mt2 * mt * path.x0 +
-                        3 * mt2 * t * path.x1 +
-                        3 * mt * t2 * path.x2 +
-                        t2 * t * path.x3,
-                    y:
-                        mt2 * mt * path.y0 +
-                        3 * mt2 * t * path.y1 +
-                        3 * mt * t2 * path.y2 +
-                        t2 * t * path.y3,
-                };
-            }
-
-            function cubicTangent(path, t) {
-                const mt = 1 - t;
-                return {
-                    x:
-                        3 * mt * mt * (path.x1 - path.x0) +
-                        6 * mt * t * (path.x2 - path.x1) +
-                        3 * t * t * (path.x3 - path.x2),
-                    y:
-                        3 * mt * mt * (path.y1 - path.y0) +
-                        6 * mt * t * (path.y2 - path.y1) +
-                        3 * t * t * (path.y3 - path.y2),
-                };
             }
 
             function syncPreviewCanvas() {
@@ -379,13 +183,51 @@
                 const dpr = window.devicePixelRatio || 1;
                 const targetWidth = Math.max(1, Math.round(width * dpr));
                 const targetHeight = Math.max(1, Math.round(height * dpr));
+                const hasMetrics = previewCanvasMetrics !== null;
+                const dimensionsChanged =
+                    !hasMetrics ||
+                    previewCanvasMetrics.width !== width ||
+                    previewCanvasMetrics.height !== height ||
+                    previewCanvasMetrics.dpr !== dpr;
 
                 if (previewCanvas.width !== targetWidth || previewCanvas.height !== targetHeight) {
                     previewCanvas.width = targetWidth;
                     previewCanvas.height = targetHeight;
                 }
-                previewCanvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                return { ctx: previewCanvasCtx, width, height };
+
+                // Set DPR transform only when the canvas backing dimensions actually change.
+                if (dimensionsChanged) {
+                    previewCanvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    previewCanvasMetrics = {
+                        width,
+                        height,
+                        dpr,
+                        pixelWidth: targetWidth,
+                        pixelHeight: targetHeight,
+                    };
+                }
+
+                return {
+                    ctx: previewCanvasCtx,
+                    width,
+                    height,
+                    dpr,
+                    pixelWidth: targetWidth,
+                    pixelHeight: targetHeight,
+                };
+            }
+
+            function clearPreviewCanvas() {
+                const canvasState = syncPreviewCanvas();
+                if (!canvasState) {
+                    return null;
+                }
+                const { ctx, pixelWidth, pixelHeight } = canvasState;
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, pixelWidth, pixelHeight);
+                ctx.restore();
+                return canvasState;
             }
 
             function setMarkerPosition(progressRatio) {
@@ -401,345 +243,13 @@
                 previewMarker.setAttribute('cy', point.y.toFixed(2));
             }
 
-            function calcSceneForDefinition(definition, progressRatio) {
-                if (!definition) {
-                    return null;
-                }
-
-                const milestones = buildStepMilestones(definition.steps);
-                const stepCount = milestones.length;
-                const bounded = Math.max(0, Math.min(1, progressRatio));
-                const fallbackIndex = Math.min(stepCount - 1, Math.floor(bounded * stepCount));
-                const stepIndex = getActiveStepIndex
-                    ? getActiveStepIndex(definition, bounded)
-                    : fallbackIndex;
-                const activeStep = milestones[Math.max(0, Math.min(stepCount - 1, stepIndex))] || milestones[0];
-                const stepProgress = Math.max(
-                    0,
-                    Math.min(1, (bounded - activeStep.start) / Math.max(0.001, activeStep.end - activeStep.start)),
-                );
-
-                const atoms = selectCueByStep
-                    ? selectCueByStep(definition.atoms, stepIndex, atom => atom.id)
-                    : [];
-                const bonds = selectCueByStep
-                    ? selectCueByStep(definition.bonds, stepIndex, bond => [bond.from, bond.to].sort().join('|'))
-                    : [];
-                const dipoles = renderOptions.strictStepCues
-                    ? selectStepScopedCues(definition.dipoles, stepIndex)
-                    : (selectCueByStep ? selectCueByStep(definition.dipoles, stepIndex) : []);
-                const lonePairs = renderOptions.strictStepCues
-                    ? selectStepScopedCues(definition.lonePairs, stepIndex)
-                    : (selectCueByStep ? selectCueByStep(definition.lonePairs, stepIndex) : []);
-                const electronMovement = selectCueByStep
-                    ? selectCueByStep(definition.electronMovement, stepIndex).filter(
-                        cue => cue && cue.step !== null && cue.step !== undefined && Number(cue.step) === stepIndex,
-                    )
-                    : [];
-
-                const atomById = new Map(atoms.map(atom => [atom.id, atom]));
-                const sceneBonds = bonds
-                    .map(bond => {
-                        const source = atomById.get(bond.from);
-                        const target = atomById.get(bond.to);
-                        if (!source || !target) {
-                            return null;
-                        }
-                        return {
-                            x1: Number(source.x || 0),
-                            y1: Number(source.y || 0),
-                            x2: Number(target.x || 0),
-                            y2: Number(target.y || 0),
-                            order: Number(bond.order || 1),
-                        };
-                    })
-                    .filter(Boolean);
-
-                const sceneAtoms = atoms.map(atom => ({
-                    x: Number(atom.x || 0),
-                    y: Number(atom.y || 0),
-                    label: atom.label || '',
-                    type: inferAtomType(atom.label),
-                    charge: Number(atom.charge || 0),
-                }));
-
-                const sceneArrows = electronMovement
-                    .map(cue => {
-                        if (!parseCubicPath || !applyArrowBend) {
-                            return null;
-                        }
-                        const parsed = parseCubicPath(cue.path || '');
-                        const curve = applyArrowBend(parsed, cue.bend);
-                        if (!curve) {
-                            return null;
-                        }
-                        return {
-                            cue,
-                            curve,
-                            t: Math.max(0.08, Math.min(1, stepProgress + 0.08)),
-                        };
-                    })
-                    .filter(Boolean);
-
-                return {
-                    stepIndex,
-                    stepCount,
-                    stepProgress,
-                    stepText: activeStep.text,
-                    atoms: sceneAtoms,
-                    bonds: sceneBonds,
-                    dipoles,
-                    lonePairs,
-                    arrows: sceneArrows,
-                };
-            }
-
-            function fitSceneToCanvas(scene, width, height, options = {}, definitionEnvelope = null) {
-                const padding = Number(options.padding);
-                const safePadding = Number.isFinite(padding) ? padding : 24;
-                const topInset = Number(options.topInset);
-                const safeTopInset = Number.isFinite(topInset) ? topInset : 18;
-                const bottomInset = Number(options.bottomInset);
-                const safeBottomInset = Number.isFinite(bottomInset) ? bottomInset : 22;
-                const minScale = Number(options.minScale);
-                const safeMinScale = Number.isFinite(minScale) ? minScale : 0.82;
-                const maxScale = Number(options.maxScale);
-                const safeMaxScale = Number.isFinite(maxScale) ? maxScale : 3.6;
-                const preserveAspect = options.preserveAspect !== false;
-                const points = [];
-
-                const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-                const pushPoint = (x, y) => {
-                    const px = Number(x);
-                    const py = Number(y);
-                    if (Number.isFinite(px) && Number.isFinite(py)) {
-                        points.push({ x: px, y: py });
-                    }
-                };
-
-                scene.atoms.forEach(atom => pushPoint(atom.x, atom.y));
-                scene.bonds.forEach(bond => {
-                    pushPoint(bond.x1, bond.y1);
-                    pushPoint(bond.x2, bond.y2);
-                });
-                scene.dipoles.forEach(cue => pushPoint(cue && cue.x, cue && cue.y));
-                scene.lonePairs.forEach(cue => pushPoint(cue && cue.x, cue && cue.y));
-                scene.arrows.forEach(arrow => {
-                    const curve = arrow.curve;
-                    if (!curve) {
-                        return;
-                    }
-                    if (sampleCurvePoints) {
-                        sampleCurvePoints(curve, renderOptions.fitArrowSamples).forEach(point => {
-                            pushPoint(point.x, point.y);
-                        });
-                        return;
-                    }
-                    for (let sample = 0; sample <= 14; sample += 1) {
-                        const t = sample / 14;
-                        const point = cubicPoint(curve, t);
-                        pushPoint(point.x, point.y);
-                    }
-                });
-
-                const sceneEnvelope = buildEnvelopeFromPoints(points);
-                const envelope = mergeEnvelopes(definitionEnvelope, sceneEnvelope);
-
-                if (!envelope) {
-                    return {
-                        scaleX: 1,
-                        scaleY: 1,
-                        offsetX: width / 2 - 180,
-                        offsetY: height / 2 - 90,
-                    };
-                }
-
-                const contentWidth = Math.max(1, envelope.maxX - envelope.minX);
-                const contentHeight = Math.max(1, envelope.maxY - envelope.minY);
-                const availableWidth = Math.max(1, width - safePadding * 2);
-                const availableHeight = Math.max(1, height - safeTopInset - safeBottomInset);
-
-                const rawScaleX = availableWidth / contentWidth;
-                const rawScaleY = availableHeight / contentHeight;
-                const scaleX = preserveAspect
-                    ? clamp(Math.min(rawScaleX, rawScaleY), safeMinScale, safeMaxScale)
-                    : clamp(rawScaleX, safeMinScale, safeMaxScale);
-                const scaleY = preserveAspect
-                    ? scaleX
-                    : clamp(rawScaleY, safeMinScale, safeMaxScale);
-
-                const targetWidth = contentWidth * scaleX;
-                const targetHeight = contentHeight * scaleY;
-                const offsetX = safePadding + (availableWidth - targetWidth) / 2 - envelope.minX * scaleX;
-                const offsetY = safeTopInset + (availableHeight - targetHeight) / 2 - envelope.minY * scaleY;
-
-                return { scaleX, scaleY, offsetX, offsetY };
-            }
-
-            function drawSceneArrow(ctx, arrow, labelRow) {
-                const { curve, t, cue } = arrow;
-                const endPoint = cubicPoint(curve, t);
-                const tangent = cubicTangent(curve, t);
-                const angle = Math.atan2(tangent.y, tangent.x);
-
-                ctx.save();
-                ctx.strokeStyle = '#f59e0b';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 3]);
-                ctx.beginPath();
-                ctx.moveTo(curve.x0, curve.y0);
-                ctx.bezierCurveTo(curve.x1, curve.y1, curve.x2, curve.y2, endPoint.x, endPoint.y);
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                const arrowSize = 7;
-                ctx.beginPath();
-                ctx.moveTo(endPoint.x, endPoint.y);
-                ctx.lineTo(
-                    endPoint.x - arrowSize * Math.cos(angle - Math.PI / 6),
-                    endPoint.y - arrowSize * Math.sin(angle - Math.PI / 6),
-                );
-                ctx.lineTo(
-                    endPoint.x - arrowSize * Math.cos(angle + Math.PI / 6),
-                    endPoint.y - arrowSize * Math.sin(angle + Math.PI / 6),
-                );
-                ctx.closePath();
-                ctx.fillStyle = '#fbbf24';
-                ctx.fill();
-
-                const electron = cubicPoint(curve, Math.max(0, Math.min(1, t - 0.08)));
-                ctx.beginPath();
-                ctx.arc(electron.x, electron.y, 2.2, 0, Math.PI * 2);
-                ctx.fillStyle = '#fde68a';
-                ctx.fill();
-                ctx.restore();
-
-                if (cue && cue.label) {
-                    ctx.fillStyle = '#fde68a';
-                    ctx.font = '600 8px "Segoe UI", sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(String(cue.label), 180, 156 - labelRow * 11);
-                }
-            }
-
-            function drawSceneFrame(scene, definition) {
-                const canvasState = syncPreviewCanvas();
-                if (!canvasState) {
-                    return;
-                }
-
-                const { ctx, width, height } = canvasState;
-                ctx.clearRect(0, 0, width, height);
-
-                const gradient = ctx.createLinearGradient(0, 0, 0, height);
-                gradient.addColorStop(0, '#020617');
-                gradient.addColorStop(1, '#0f172a');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, width, height);
-
-                if (!scene) {
-                    ctx.fillStyle = '#94a3b8';
-                    ctx.font = '600 12px "Segoe UI", sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('No mechanism scene available', width / 2, height / 2);
-                    return;
-                }
-
-                const definitionEnvelope = renderOptions.stabilizeFitByDefinition
-                    ? getDefinitionFitEnvelope(definition)
-                    : null;
-                const fit = fitSceneToCanvas(scene, width, height, {
-                    padding: renderOptions.fitMargin,
-                    topInset: renderOptions.fitTopInset,
-                    bottomInset: renderOptions.fitBottomInset,
-                    preserveAspect: renderOptions.preserveAspect,
-                    minScale: renderOptions.fitMinScale,
-                    maxScale: renderOptions.fitMaxScale,
-                }, definitionEnvelope);
-
-                ctx.save();
-                ctx.translate(fit.offsetX, fit.offsetY);
-                ctx.scale(fit.scaleX, fit.scaleY);
-
-                scene.bonds.forEach(bond => {
-                    if (canvasRenderer && typeof canvasRenderer.drawCanvasBond === 'function') {
-                        canvasRenderer.drawCanvasBond(
-                            ctx,
-                            { x: bond.x1, y: bond.y1 },
-                            { x: bond.x2, y: bond.y2 },
-                            bond.order,
-                        );
-                        return;
-                    }
-                    ctx.beginPath();
-                    ctx.moveTo(bond.x1, bond.y1);
-                    ctx.lineTo(bond.x2, bond.y2);
-                    ctx.strokeStyle = '#94a3b8';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                });
-
-                scene.arrows.forEach((arrow, idx) => drawSceneArrow(ctx, arrow, idx));
-
-                scene.atoms.forEach(atom => {
-                    if (canvasRenderer && typeof canvasRenderer.drawCanvasAtom === 'function') {
-                        canvasRenderer.drawCanvasAtom(ctx, atom);
-                        return;
-                    }
-                    ctx.beginPath();
-                    ctx.arc(atom.x, atom.y, 8, 0, Math.PI * 2);
-                    ctx.fillStyle = '#334155';
-                    ctx.fill();
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '700 8px "Segoe UI", sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(atom.label || '', atom.x, atom.y);
-                });
-
-                scene.dipoles.forEach(cue => {
-                    if (canvasRenderer && typeof canvasRenderer.drawCanvasDipole === 'function') {
-                        canvasRenderer.drawCanvasDipole(ctx, cue);
-                    }
-                });
-
-                scene.lonePairs.forEach(cue => {
-                    if (canvasRenderer && typeof canvasRenderer.drawCanvasLonePair === 'function') {
-                        canvasRenderer.drawCanvasLonePair(ctx, cue);
-                    }
-                });
-
-                ctx.restore();
-
-                ctx.fillStyle = 'rgba(148, 163, 184, 0.9)';
-                ctx.font = '600 10px "Segoe UI", sans-serif';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(`Step ${scene.stepIndex + 1}/${scene.stepCount}`, 10, 14);
-            }
 
             function renderFallbackCanvas() {
-                if (drawMechanismCanvasFrame && currentDefinition) {
-                    drawMechanismCanvasFrame(currentDefinition, currentProgress, {
-                        syncCanvas: syncPreviewCanvas,
-                        fitToContent: true,
-                        preserveAspect: true,
-                        strictStepCues: true,
-                        fitMargin: 24,
-                        fitTopInset: 24,
-                        fitBottomInset: 28,
-                    });
-                    return;
-                }
-
-                const canvasState = syncPreviewCanvas();
+                const canvasState = clearPreviewCanvas();
                 if (!canvasState) {
                     return;
                 }
                 const { ctx, width, height } = canvasState;
-                ctx.clearRect(0, 0, width, height);
                 const gradient = ctx.createLinearGradient(0, 0, 0, height);
                 gradient.addColorStop(0, '#020617');
                 gradient.addColorStop(1, '#0f172a');
@@ -777,14 +287,24 @@
                     return;
                 }
 
-                const scene = calcSceneForDefinition(currentDefinition, bounded);
-                if (scene) {
-                    drawSceneFrame(scene, currentDefinition);
-                    previewStep.innerText = scene.stepText || 'Mechanism step preview.';
-                } else {
-                    previewStep.innerText = 'Mechanism step preview.';
-                    renderFallbackCanvas();
+                const steps = Array.isArray(currentDefinition.steps) && currentDefinition.steps.length
+                    ? currentDefinition.steps
+                    : ['Mechanism step preview.'];
+                const fallbackIndex = Math.min(steps.length - 1, Math.floor(bounded * steps.length));
+                const stepIndex = getActiveStepIndex
+                    ? getActiveStepIndex(currentDefinition, bounded)
+                    : fallbackIndex;
+                previewStep.innerText = steps[Math.max(0, Math.min(stepIndex, steps.length - 1))] || 'Mechanism step preview.';
+
+                if (drawMechanismCanvasFrame) {
+                    drawMechanismCanvasFrame(currentDefinition, bounded, {
+                        syncCanvas: syncPreviewCanvas,
+                        mechanismId: currentAnimationId || currentDefinition.id,
+                        ...renderOptions,
+                    });
+                    return;
                 }
+                renderFallbackCanvas();
             }
 
             function renderDefinition(animationId) {

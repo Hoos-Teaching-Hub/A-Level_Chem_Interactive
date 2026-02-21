@@ -4,13 +4,16 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run sync-renderer",
     "build": "tsc -b && vite build",
+    "pretest": "npm run sync-renderer",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "node tests/paths.test.js && node tests/structure.test.js && node tests/visual-smoke.test.js && node tests/m2-animation-standard.test.js && node tests/m2-animation-visuals.test.js && bash scripts/test-edge.sh",
     "test:edge": "bash scripts/test-edge.sh",
     "test:visual": "npm run build && node scripts/visual-smoke.js",
     "test:visual:fast": "node scripts/visual-smoke.js",
+    "sync-renderer": "node scripts/sync-mechanism-renderer.mjs",
     "verify:local": "node tests/paths.test.js && npm run build && bash scripts/test-edge.sh"
   },
   "dependencies": {

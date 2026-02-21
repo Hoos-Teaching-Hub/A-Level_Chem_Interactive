@@ -107,8 +107,10 @@
                     <p id="animationTitle" class="text-sm font-semibold text-white mt-2"></p>
                     <p id="animationSummary" class="text-xs text-gray-300 mt-1"></p>
                     <div class="mt-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
-                        <canvas id="animationCanvas" width="360" height="180" class="w-full h-40 rounded bg-slate-950"
-                            aria-label="Mechanism animation canvas"></canvas>
+                        <div class="w-full aspect-[2/1]">
+                            <canvas id="animationCanvas" width="360" height="180" class="w-full h-full rounded bg-slate-950"
+                                aria-label="Mechanism animation canvas"></canvas>
+                        </div>
                         <svg id="animationSvg" viewBox="0 0 360 110" class="hidden w-full h-20" aria-label="Mechanism animation">
                             <defs>
                                 <marker id="animationElectronArrowHead" markerWidth="8" markerHeight="8" refX="7"

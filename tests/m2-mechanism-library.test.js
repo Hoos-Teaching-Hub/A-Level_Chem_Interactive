@@ -46,6 +46,7 @@ curatedIds.forEach((animationId) => {
 });
 
 assertFileExists('scripts/sync-mechanism-definitions.mjs');
+assertFileExists('scripts/sync-mechanism-renderer.mjs');
 assertFileExists('src/js/mechanism-definitions.js');
 assertFileExists('public/js/mechanism-definitions.js');
 assertFileExists('src/js/mechanism-canvas-renderer.js');
@@ -59,6 +60,15 @@ assert.strictEqual(
   readText('src/js/mechanism-canvas-renderer.js'),
   readText('public/js/mechanism-canvas-renderer.js'),
   'Shared mechanism canvas renderer should stay in sync across src/public.',
+);
+const rendererSource = readText('src/js/mechanism-canvas-renderer.js');
+assert.ok(
+  rendererSource.includes('function fitContain('),
+  'Renderer must expose fitContain helper as the shared aspect-fit primitive.',
+);
+assert.ok(
+  !rendererSource.includes('ctx.scale(width / viewWidth, height / viewHeight)'),
+  'Renderer must not use default non-uniform scaling from width/height ratios.',
 );
 
 const previewHtml = readText('public/mechanism-preview.html');
@@ -74,15 +84,32 @@ assertIncludesAll(
     'window.OrganicMapCanvasRenderer',
     'drawMechanismCanvasFrame(',
     'selectCueByStep(',
-    'function calcSceneForDefinition(',
-    'function drawSceneFrame(',
     'function buildStepMilestones(',
-    'function fitSceneToCanvas(',
+    'function syncPreviewCanvas(',
+    'function clearPreviewCanvas(',
     'fitToContent: true',
     'preserveAspect: true',
+    'stretchToFill: false',
+    "fitScope: 'mechanism'",
     'strictStepCues: true',
   ],
   'mechanism preview page',
+);
+[
+  'function calcSceneForDefinition(',
+  'function drawSceneFrame(',
+  'function fitSceneToCanvas(',
+  'function drawSceneArrow(',
+  'function inferAtomType(',
+].forEach((legacySignature) => {
+  assert.ok(
+    !previewHtml.includes(legacySignature),
+    `mechanism preview page should not keep deprecated local renderer path: ${legacySignature}`,
+  );
+});
+assert.ok(
+  previewHtml.includes('aspect-[2/1]'),
+  'Mechanism preview canvas container should enforce a 2:1 aspect ratio.',
 );
 
 const mapHtml = readText('public/organic-map.html');
@@ -98,6 +125,24 @@ assert.ok(
 assert.ok(
   mapHtml.indexOf('js/mechanism-canvas-renderer.js') < mapHtml.indexOf('js/main.js'),
   'Mechanism canvas renderer script should load before main map runtime script.',
+);
+assert.ok(
+  mapHtml.includes('id="animationCanvas"') && mapHtml.includes('aspect-[2/1]'),
+  'Organic map mechanism canvas should be wrapped in a 2:1 aspect ratio container.',
+);
+
+const packageJson = readJson('package.json');
+assert.ok(
+  packageJson.scripts && packageJson.scripts['sync-renderer'],
+  'package.json should expose a sync-renderer script for src/public renderer parity.',
+);
+assert.ok(
+  packageJson.scripts && typeof packageJson.scripts.pretest === 'string' && packageJson.scripts.pretest.includes('sync-renderer'),
+  'package.json pretest should sync renderer before tests.',
+);
+assert.ok(
+  packageJson.scripts && typeof packageJson.scripts.prebuild === 'string' && packageJson.scripts.prebuild.includes('sync-renderer'),
+  'package.json prebuild should sync renderer before builds.',
 );
 
 console.log('Verified mechanism definition source folder, generated modules, and preview wiring.');

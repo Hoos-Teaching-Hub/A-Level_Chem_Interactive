@@ -36,6 +36,7 @@ let animationPathLength = 0;
 let animationVisualStep = -1;
 let animationCanvasElem;
 let animationCanvasCtx = null;
+let animationCanvasMetrics = null;
 let animationPlayBtnElem;
 let animationResetBtnElem;
 let animationProgressElem;
@@ -703,13 +704,38 @@ function syncAnimationCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const targetWidth = Math.max(1, Math.round(width * dpr));
     const targetHeight = Math.max(1, Math.round(height * dpr));
+    const hasMetrics = animationCanvasMetrics !== null;
+    const dimensionsChanged =
+        !hasMetrics ||
+        animationCanvasMetrics.width !== width ||
+        animationCanvasMetrics.height !== height ||
+        animationCanvasMetrics.dpr !== dpr;
 
     if (animationCanvasElem.width !== targetWidth || animationCanvasElem.height !== targetHeight) {
         animationCanvasElem.width = targetWidth;
         animationCanvasElem.height = targetHeight;
     }
-    animationCanvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return { ctx: animationCanvasCtx, width, height };
+
+    // Apply DPR transform only when the backing store dimensions actually change.
+    if (dimensionsChanged) {
+        animationCanvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        animationCanvasMetrics = {
+            width,
+            height,
+            dpr,
+            pixelWidth: targetWidth,
+            pixelHeight: targetHeight,
+        };
+    }
+
+    return {
+        ctx: animationCanvasCtx,
+        width,
+        height,
+        dpr,
+        pixelWidth: targetWidth,
+        pixelHeight: targetHeight,
+    };
 }
 
 function getActiveStepIndex(animationSpec, progressRatio) {
@@ -922,6 +948,17 @@ function drawMechanismCanvasFrame(animationSpec, progressRatio) {
     ) {
         organicMapCanvasRenderer.drawMechanismCanvasFrame(animationSpec, progressRatio, {
             syncCanvas: syncAnimationCanvas,
+            mechanismId: animationSpec && animationSpec.id ? animationSpec.id : undefined,
+            fitToContent: true,
+            preserveAspect: true,
+            stretchToFill: false,
+            fitScope: 'mechanism',
+            strictStepCues: true,
+            padding: 24,
+            fitTopInset: 18,
+            fitBottomInset: 20,
+            fitMinScale: 0.82,
+            fitMaxScale: 3.6,
         });
         return;
     }
@@ -934,10 +971,21 @@ function drawMechanismCanvasFrame(animationSpec, progressRatio) {
     const { ctx, width, height } = canvasState;
     const viewWidth = 360;
     const viewHeight = 180;
+    const stretchToFill = false;
+    const fitScale = Math.min(width / viewWidth, height / viewHeight);
+    const scaleX = stretchToFill ? width / viewWidth : fitScale;
+    const scaleY = stretchToFill ? height / viewHeight : fitScale;
+    const offsetX = stretchToFill ? 0 : (width - viewWidth * fitScale) / 2;
+    const offsetY = stretchToFill ? 0 : (height - viewHeight * fitScale) / 2;
 
-    ctx.clearRect(0, 0, width, height);
     ctx.save();
-    ctx.scale(width / viewWidth, height / viewHeight);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvasState.pixelWidth, canvasState.pixelHeight);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scaleX, scaleY);
 
     const gradient = ctx.createLinearGradient(0, 0, 0, viewHeight);
     gradient.addColorStop(0, '#020617');
@@ -1332,7 +1380,10 @@ function showAnimationUnavailable(message) {
     if (animationCanvasCtx && animationCanvasElem) {
         const canvasState = syncAnimationCanvas();
         if (canvasState) {
-            canvasState.ctx.clearRect(0, 0, canvasState.width, canvasState.height);
+            canvasState.ctx.save();
+            canvasState.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            canvasState.ctx.clearRect(0, 0, canvasState.pixelWidth, canvasState.pixelHeight);
+            canvasState.ctx.restore();
         }
     }
     if (animationProgressElem) {

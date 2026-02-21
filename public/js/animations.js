@@ -30,6 +30,55 @@ function loadCuratedAnimationOverrides() {
 }
 
 const curatedAnimationOverrides = loadCuratedAnimationOverrides();
+
+function loadMechanismDefinitionValidator() {
+    if (
+        typeof window !== 'undefined' &&
+        window.OrganicMapCanvasRenderer &&
+        typeof window.OrganicMapCanvasRenderer.validateMechanismDefinition === 'function'
+    ) {
+        return window.OrganicMapCanvasRenderer.validateMechanismDefinition;
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        try {
+            const renderer = require('./mechanism-canvas-renderer');
+            if (renderer && typeof renderer.validateMechanismDefinition === 'function') {
+                return renderer.validateMechanismDefinition;
+            }
+        } catch (error) {
+            // Ignore module load failures to keep compatibility in non-Node runtimes.
+        }
+    }
+
+    return null;
+}
+
+function shouldValidateInDevelopment() {
+    if (typeof process !== 'undefined' && process && process.env) {
+        return process.env.NODE_ENV !== 'production';
+    }
+
+    if (typeof window !== 'undefined' && window.location) {
+        const host = String(window.location.hostname || '').toLowerCase();
+        return host === '' || host === 'localhost' || host === '127.0.0.1';
+    }
+
+    return false;
+}
+
+const mechanismDefinitionValidator = loadMechanismDefinitionValidator();
+
+function validateAnimationEntryInDev(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return;
+    }
+    if (!mechanismDefinitionValidator || !shouldValidateInDevelopment()) {
+        return;
+    }
+    mechanismDefinitionValidator(entry, { mechanismId: entry.id });
+}
+
 function isNonEmptyString(value) {
     return typeof value === 'string' && value.trim().length > 0;
 }
@@ -130,6 +179,65 @@ function sanitizeElectronMovement(cues) {
         }));
 }
 
+function sanitizeCueRegistry(cueRegistry) {
+    if (!cueRegistry || typeof cueRegistry !== 'object') {
+        return null;
+    }
+    if (Array.isArray(cueRegistry)) {
+        return cueRegistry
+            .filter(entry => entry && typeof entry === 'object')
+            .map(entry => ({
+                ...entry,
+                id: isNonEmptyString(entry.id) ? entry.id.trim() : '',
+            }))
+            .filter(entry => entry.id);
+    }
+
+    const normalized = {};
+    Object.keys(cueRegistry).forEach(key => {
+        if (!isNonEmptyString(key)) {
+            return;
+        }
+        const cueId = key.trim();
+        const cueValue = cueRegistry[key];
+        if (cueValue && typeof cueValue === 'object') {
+            normalized[cueId] = cueValue;
+        }
+    });
+    return normalized;
+}
+
+function sanitizeStepSemantics(stepSemantics, steps) {
+    if (!Array.isArray(stepSemantics)) {
+        return null;
+    }
+
+    const stepCount = Array.isArray(steps) ? steps.length : 0;
+    const normalized = stepSemantics.map(entry => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+            return null;
+        }
+        const events = Array.isArray(entry.events)
+            ? entry.events
+                .filter(event => event && typeof event === 'object' && !Array.isArray(event))
+                .map(event => ({ ...event }))
+            : [];
+        const invariants = Array.isArray(entry.invariants)
+            ? entry.invariants.filter(isNonEmptyString).map(item => item.trim())
+            : [];
+        return {
+            events,
+            invariants,
+        };
+    });
+
+    while (stepCount > 0 && normalized.length < stepCount) {
+        normalized.push(null);
+    }
+
+    return normalized;
+}
+
 function sanitizeAtoms(cues) {
     if (!Array.isArray(cues)) {
         return [];
@@ -183,7 +291,12 @@ function buildAnimationEntry(link, override) {
         ? link.mechanismSummary
         : `${sourceName} to ${targetName} reaction pathway.`;
 
-    return {
+    const steps =
+        Array.isArray(override && override.steps) && override.steps.length
+            ? override.steps.filter(isNonEmptyString)
+            : buildDefaultSteps(link, sourceName, targetName);
+
+    const entry = {
         id: link.animationId,
         title: isNonEmptyString(override && override.title) ? override.title : fallbackTitle,
         summary: isNonEmptyString(override && override.summary) ? override.summary : fallbackSummary,
@@ -192,16 +305,22 @@ function buildAnimationEntry(link, override) {
             Number.isFinite(override && override.durationMs) && override.durationMs > 0
                 ? Math.floor(override.durationMs)
                 : DEFAULT_ANIMATION_DURATION_MS,
-        steps:
-            Array.isArray(override && override.steps) && override.steps.length
-                ? override.steps.filter(isNonEmptyString)
-                : buildDefaultSteps(link, sourceName, targetName),
+        steps,
         atoms: sanitizeAtoms(override && override.atoms),
         bonds: sanitizeBonds(override && override.bonds),
         dipoles: sanitizeDipoles(override && override.dipoles),
         lonePairs: sanitizeLonePairs(override && override.lonePairs),
         electronMovement: sanitizeElectronMovement(override && override.electronMovement),
+        stepCueIds: Array.isArray(override && override.stepCueIds)
+            ? override.stepCueIds.map(entry => (Array.isArray(entry) ? entry.slice() : entry))
+            : undefined,
+        cueRegistry: sanitizeCueRegistry(override && (override.cueRegistry || override.cues)),
+        stepSemantics: sanitizeStepSemantics(override && override.stepSemantics, steps),
     };
+
+    // Fail fast in development when mechanism definitions violate renderer contracts.
+    validateAnimationEntryInDev(entry);
+    return entry;
 }
 
 function buildAnimationRegistry(links = []) {
