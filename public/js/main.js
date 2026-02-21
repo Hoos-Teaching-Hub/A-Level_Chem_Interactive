@@ -20,6 +20,8 @@ const compoundDescriptions =
     organicMapData && organicMapData.compoundDescriptions ? organicMapData.compoundDescriptions : {};
 const organicMapAnimations =
     typeof window !== 'undefined' && window.OrganicMapAnimations ? window.OrganicMapAnimations : null;
+const organicMapCanvasRenderer =
+    typeof window !== 'undefined' && window.OrganicMapCanvasRenderer ? window.OrganicMapCanvasRenderer : null;
 
 // Global variables for Graph and UI state.
 // These are assigned after the DOM is ready so we can reuse them in handlers.
@@ -914,6 +916,16 @@ function drawCanvasArrow(ctx, cue, stepProgress, labelRow) {
 }
 
 function drawMechanismCanvasFrame(animationSpec, progressRatio) {
+    if (
+        organicMapCanvasRenderer &&
+        typeof organicMapCanvasRenderer.drawMechanismCanvasFrame === 'function'
+    ) {
+        organicMapCanvasRenderer.drawMechanismCanvasFrame(animationSpec, progressRatio, {
+            syncCanvas: syncAnimationCanvas,
+        });
+        return;
+    }
+
     const canvasState = syncAnimationCanvas();
     if (!canvasState || !animationSpec) {
         return;

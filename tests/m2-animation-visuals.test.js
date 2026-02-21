@@ -3,6 +3,8 @@ const srcData = require('../src/js/data');
 const publicData = require('../public/js/data');
 const srcAnimations = require('../src/js/animations');
 const publicAnimations = require('../public/js/animations');
+const srcCanvasRenderer = require('../src/js/mechanism-canvas-renderer');
+const publicCanvasRenderer = require('../public/js/mechanism-canvas-renderer');
 const { readText } = require('./test-utils');
 
 const REQUIRED_VISUAL_IDS = [
@@ -16,8 +18,42 @@ const REQUIRED_VISUAL_IDS = [
 const CURATED_MECHANISM_IDS = [
   'alkene-hx-addition',
   'halo-to-alcohol-substitution',
+  'halo-to-amine-nuc-sub',
+  'halo-to-nitrile-nuc-sub',
+  'haloalkane-elimination',
+  'primary-alcohol-oxidation',
+  'ketone-reduction',
   'alcohol-dehydration',
 ];
+
+const CURATED_MECHANISM_MIN_STEPS = {
+  'alkene-hx-addition': 5,
+  'halo-to-alcohol-substitution': 3,
+  'halo-to-amine-nuc-sub': 3,
+  'halo-to-nitrile-nuc-sub': 3,
+  'haloalkane-elimination': 3,
+  'primary-alcohol-oxidation': 3,
+  'ketone-reduction': 3,
+  'alcohol-dehydration': 3,
+};
+
+const CURATED_MECHANISM_EXPECTED_ARROWS = {
+  'halo-to-amine-nuc-sub': [':NH3 -> C', 'C-X -> X-'],
+  'halo-to-nitrile-nuc-sub': [':CN- -> C', 'C-X -> X-'],
+  'haloalkane-elimination': [':B -> beta-H', 'C-H -> C=C', 'C-X -> X-'],
+  'primary-alcohol-oxidation': [':O -> H', 'C-H -> O', 'O-H -> O'],
+  'ketone-reduction': ['H- -> C=O carbon', 'pi -> O', 'O: -> H+'],
+};
+
+const CURATED_MECHANISM_EXPECTED_LONE_PAIRS = {
+  'halo-to-alcohol-substitution': [':OH-'],
+  'halo-to-amine-nuc-sub': [':NH3'],
+  'halo-to-nitrile-nuc-sub': [':CN-'],
+  'haloalkane-elimination': [':B'],
+  'primary-alcohol-oxidation': [':O'],
+  'ketone-reduction': [':H-'],
+  'alcohol-dehydration': [':O', ':B'],
+};
 
 const MIN_ATOM_DISTANCE_PX = 16;
 const MIN_EFFECTIVE_BEND_PX = 3.5;
@@ -298,6 +334,52 @@ const assertElectrophilicBromideAttackArrowTargetsCation = (entry, label) => {
   );
 };
 
+const assertMechanismSpecificCues = (entry, label, animationId) => {
+  const minSteps = CURATED_MECHANISM_MIN_STEPS[animationId];
+  if (Number.isInteger(minSteps)) {
+    assert.ok(
+      Array.isArray(entry.steps) && entry.steps.length >= minSteps,
+      `${label} animation "${animationId}" should include at least ${minSteps} mechanism steps.`,
+    );
+  }
+
+  const requiredArrows = CURATED_MECHANISM_EXPECTED_ARROWS[animationId] || [];
+  requiredArrows.forEach((arrowLabel) => {
+    const arrowCue = entry.electronMovement.find((cue) => cue && cue.label === arrowLabel);
+    assert.ok(
+      arrowCue,
+      `${label} animation "${animationId}" is missing required electron arrow cue "${arrowLabel}".`,
+    );
+  });
+
+  const requiredLonePairs = CURATED_MECHANISM_EXPECTED_LONE_PAIRS[animationId] || [];
+  requiredLonePairs.forEach((lonePairLabel) => {
+    const lonePairCue = entry.lonePairs.find((cue) => cue && cue.label === lonePairLabel);
+    assert.ok(
+      lonePairCue,
+      `${label} animation "${animationId}" is missing required lone-pair cue "${lonePairLabel}".`,
+    );
+  });
+
+  if (animationId === 'alcohol-dehydration') {
+    const dehydrationDipoleInitial = entry.dipoles.find(
+      (cue) => cue && cue.text === 'Odelta- / Hdelta+' && Number(cue.step) === 0,
+    );
+    assert.ok(
+      dehydrationDipoleInitial && Number(dehydrationDipoleInitial.endStep) === 0,
+      `${label} alcohol-dehydration initial O-H dipole cue should end after step 1.`,
+    );
+
+    const dehydrationCarbocation = entry.dipoles.find(
+      (cue) => cue && cue.text === '+' && Number(cue.step) === 1,
+    );
+    assert.ok(
+      dehydrationCarbocation && Number(dehydrationCarbocation.endStep) === 1,
+      `${label} alcohol-dehydration carbocation marker should end after step 2.`,
+    );
+  }
+};
+
 const assertRegistryVisualCues = (label, gData, buildAnimationRegistry) => {
   const registry = buildAnimationRegistry(gData.links);
   CURATED_MECHANISM_IDS.forEach((animationId) => {
@@ -306,6 +388,7 @@ const assertRegistryVisualCues = (label, gData, buildAnimationRegistry) => {
     assertVisualCueShape(entry, label, animationId);
     assertAtomSpacing(entry, label, animationId);
     assertElectronArrowBend(entry, label, animationId);
+    assertMechanismSpecificCues(entry, label, animationId);
     if (animationId === 'alkene-hx-addition') {
       assertElectrophilicArrowTargetsBromine(entry, label);
       assertElectrophilicChargeMarkerStyle(entry, label);
@@ -315,8 +398,80 @@ const assertRegistryVisualCues = (label, gData, buildAnimationRegistry) => {
   });
 };
 
+const assertRendererFitSampling = (label, renderer) => {
+  assert.ok(
+    renderer && typeof renderer.sampleCurvePoints === 'function',
+    `${label} mechanism canvas renderer should expose sampleCurvePoints for curve-aware fitting.`,
+  );
+  assert.ok(
+    renderer && typeof renderer.collectMechanismPoints === 'function',
+    `${label} mechanism canvas renderer should expose collectMechanismPoints for fit coverage.`,
+  );
+  assert.ok(
+    renderer && typeof renderer.buildContentFitTransform === 'function',
+    `${label} mechanism canvas renderer should expose buildContentFitTransform for bounded scaling.`,
+  );
+
+  const parsed = renderer.parseCubicPath('M 108 82 C -420 -360, 540 420, 176 40');
+  assert.ok(parsed, `${label} mechanism canvas renderer should parse cubic curves for fit sampling.`);
+
+  const curve = renderer.applyArrowBend(parsed, 1.35);
+  const sampledPoints = renderer.sampleCurvePoints(curve, 18);
+  assert.ok(
+    sampledPoints.length >= 10,
+    `${label} mechanism canvas renderer should return enough sampled points for curve bounds.`,
+  );
+
+  const includesStart = sampledPoints.some(
+    (point) => Math.hypot(point.x - curve.x0, point.y - curve.y0) <= 0.001,
+  );
+  const includesEnd = sampledPoints.some(
+    (point) => Math.hypot(point.x - curve.x3, point.y - curve.y3) <= 0.001,
+  );
+  assert.ok(
+    includesStart && includesEnd,
+    `${label} mechanism canvas renderer sampled points should include both curve endpoints.`,
+  );
+
+  const fitPoints = renderer.collectMechanismPoints(
+    [],
+    [],
+    [],
+    [{ path: 'M 108 82 C -420 -360, 540 420, 176 40', bend: 1.35 }],
+  );
+  const hasControlPointSample = fitPoints.some(
+    (point) =>
+      (Math.abs(point.x - curve.x1) <= 0.001 && Math.abs(point.y - curve.y1) <= 0.001) ||
+      (Math.abs(point.x - curve.x2) <= 0.001 && Math.abs(point.y - curve.y2) <= 0.001),
+  );
+  assert.ok(
+    !hasControlPointSample,
+    `${label} mechanism canvas renderer fit points should follow sampled curve geometry, not raw control points.`,
+  );
+
+  const fitTransform = renderer.buildContentFitTransform(fitPoints, {
+    viewWidth: 360,
+    viewHeight: 180,
+    fitMargin: 24,
+    fitTopInset: 24,
+    fitBottomInset: 28,
+    fitMinScale: 0.75,
+    fitMaxScale: 2.4,
+  });
+  assert.ok(
+    fitTransform && Number.isFinite(fitTransform.scale),
+    `${label} mechanism canvas renderer should compute finite fit transform from sampled points.`,
+  );
+  assert.ok(
+    fitTransform.scale >= 0.75 && fitTransform.scale <= 2.4,
+    `${label} mechanism canvas renderer fit scale should stay within configured limits.`,
+  );
+};
+
 assertRegistryVisualCues('src', srcData.gData, srcAnimations.buildAnimationRegistry);
 assertRegistryVisualCues('public', publicData.gData, publicAnimations.buildAnimationRegistry);
+assertRendererFitSampling('src', srcCanvasRenderer);
+assertRendererFitSampling('public', publicCanvasRenderer);
 
 const mapHtml = readText('public/organic-map.html');
 REQUIRED_VISUAL_IDS.forEach((id) => {

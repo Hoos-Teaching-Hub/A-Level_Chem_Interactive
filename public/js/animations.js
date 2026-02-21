@@ -1,146 +1,35 @@
 const DEFAULT_ANIMATION_PATH = 'M 24 84 C 92 26, 268 26, 336 84';
 const DEFAULT_ANIMATION_DURATION_MS = 3600;
 
-const curatedAnimationOverrides = {
-    'free-radical-substitution': {
-        title: 'Free-radical substitution',
-        summary: 'UV initiation creates radicals that propagate chain substitution.',
-        path: 'M 22 82 C 104 16, 256 16, 338 82',
-        steps: [
-            'Initiation: homolytic bond fission forms radicals under UV.',
-            'Propagation: radical abstracts hydrogen to form alkyl radical.',
-            'Propagation: alkyl radical reacts with halogen to regenerate radical.'
-        ]
-    },
-    'alkene-hx-addition': {
-        title: 'Electrophilic addition',
-        summary: 'Ethene pi electrons attack HBr, form a carbocation, then bromide attacks.',
-        path: 'M 26 76 C 120 20, 208 20, 334 76',
-        steps: [
-            'Reactants approach: ethene near polarized H-Br.',
-            'Pi electrons attack H while H-Br bond breaks heterolytically.',
-            'Carbocation intermediate forms with free bromide ion.',
-            'Bromide lone pair attacks the carbocation.',
-            'Final product: bromoethane with all atoms neutral.'
-        ],
-        atoms: [
-            { id: 'c1', x: 88, y: 92, label: 'C', charge: 0, step: 0 },
-            { id: 'c2', x: 126, y: 84, label: 'C', charge: 0, step: 0 },
-            { id: 'h1', x: 56, y: 70, label: 'H', step: 0 },
-            { id: 'h2', x: 52, y: 118, label: 'H', step: 0 },
-            { id: 'h3', x: 160, y: 66, label: 'H', step: 0 },
-            { id: 'h4', x: 168, y: 112, label: 'H', step: 0 },
-            { id: 'hR', x: 176, y: 40, label: 'H', step: 0 },
-            { id: 'x', x: 214, y: 40, label: 'Br', charge: 0, step: 0 },
-
-            { id: 'c1', x: 88, y: 94, label: 'C', charge: 1, step: 2 },
-            { id: 'c2', x: 126, y: 86, label: 'C', charge: 0, step: 2 },
-            { id: 'h3', x: 164, y: 72, label: 'H', step: 2 },
-            { id: 'h4', x: 172, y: 114, label: 'H', step: 2 },
-            { id: 'hR', x: 142, y: 60, label: 'H', step: 2 },
-            { id: 'x', x: 286, y: 72, label: 'Br', charge: -1, step: 2 },
-
-            { id: 'x', x: 242, y: 74, label: 'Br', charge: -1, step: 3 },
-            { id: 'x', x: 58, y: 54, label: 'Br', charge: 0, step: 4 },
-            { id: 'c1', x: 88, y: 92, label: 'C', charge: 0, step: 4 },
-        ],
-        bonds: [
-            { from: 'c1', to: 'c2', order: 2, step: 0, endStep: 1 },
-            { from: 'c1', to: 'h1', order: 1, step: 0 },
-            { from: 'c1', to: 'h2', order: 1, step: 0 },
-            { from: 'c2', to: 'h3', order: 1, step: 0 },
-            { from: 'c2', to: 'h4', order: 1, step: 0 },
-            { from: 'hR', to: 'x', order: 1, step: 0, endStep: 1 },
-
-            { from: 'c1', to: 'c2', order: 1, step: 2 },
-            { from: 'c2', to: 'hR', order: 1, step: 2 },
-            { from: 'c1', to: 'x', order: 1, step: 4 },
-        ],
-        dipoles: [
-            { x: 176, y: 26, text: 'delta+ H', step: 0, endStep: 1 },
-            { x: 212, y: 26, text: 'delta- Br', step: 0, endStep: 1 },
-            { x: 88, y: 84, text: '+', step: 2, endStep: 3 },
-        ],
-        lonePairs: [
-            { x: 300, y: 60, label: '', step: 2, endStep: 2 },
-            { x: 256, y: 62, label: '', step: 3, endStep: 3 },
-        ],
-        electronMovement: [
-            { path: 'M 108 82 C 134 52, 156 44, 176 40', label: 'pi e- -> H', step: 1, endStep: 1, bend: 1.5 },
-            { path: 'M 192 40 C 198 18, 208 16, 214 40', label: 'H-Br -> Br', step: 1, endStep: 1, bend: 1.6 },
-            { path: 'M 256 62 C 228 120, 150 126, 88 84', label: 'Br: -> +', step: 3, endStep: 3, bend: 1.5 },
-        ],
-    },
-    'halo-to-alcohol-substitution': {
-        title: 'Nucleophilic substitution',
-        summary: 'Hydroxide donates a lone pair and displaces the halide.',
-        path: 'M 26 82 C 112 32, 246 28, 334 82',
-        steps: [
-            'Hydroxide approaches the electron-poor carbon.',
-            'C-X bond breaks as C-O bond forms.',
-            'Alcohol product forms after substitution completes.'
-        ],
-        atoms: [
-            { id: 'c', x: 188, y: 60, label: 'C', step: null },
-            { id: 'x', x: 286, y: 50, label: 'X', step: null },
-            { id: 'o', x: 82, y: 52, label: 'O', step: null },
-            { id: 'h', x: 64, y: 44, label: 'H', step: null },
-        ],
-        bonds: [
-            { from: 'c', to: 'x', order: 1, step: 0 },
-            { from: 'o', to: 'h', order: 1, step: null },
-            { from: 'c', to: 'o', order: 1, step: 2 },
-        ],
-        dipoles: [
-            { x: 190, y: 58, text: 'Cdelta+ - Xdelta-', step: 0 },
-        ],
-        lonePairs: [
-            { x: 82, y: 52, label: ':OH-', step: 0 },
-        ],
-        electronMovement: [
-            { path: 'M 92 54 C 118 20, 154 22, 182 60', label: ':OH- -> C', step: 0, bend: 1.35 },
-            { path: 'M 186 60 C 214 18, 258 20, 286 50', label: 'C-X -> X', step: 1, bend: 1.35 },
-        ],
-    },
-    'alcohol-dehydration': {
-        title: 'Elimination (dehydration)',
-        summary: 'Acid-catalyzed elimination removes water and reforms C=C.',
-        path: 'M 24 86 C 120 18, 240 18, 336 86',
-        steps: [
-            'The alcohol oxygen is protonated to make a good leaving group.',
-            'Water leaves and a carbocation intermediate forms.',
-            'Base removes adjacent proton to regenerate the double bond.'
-        ],
-        atoms: [
-            { id: 'c1', x: 148, y: 60, label: 'C', step: null },
-            { id: 'c2', x: 184, y: 56, label: 'C', step: null },
-            { id: 'o', x: 128, y: 40, label: 'O', step: null },
-            { id: 'h', x: 164, y: 22, label: 'H', step: null },
-            { id: 'bh', x: 286, y: 58, label: 'B:', step: null },
-        ],
-        bonds: [
-            { from: 'c1', to: 'c2', order: 1, step: 0 },
-            { from: 'c1', to: 'o', order: 1, step: 0 },
-            { from: 'o', to: 'h', order: 1, step: 0 },
-            { from: 'c1', to: 'c2', order: 1, step: 1 },
-            { from: 'c1', to: 'c2', order: 2, step: 2 },
-        ],
-        dipoles: [
-            { x: 148, y: 44, text: 'Odelta- / Hdelta+', step: 0 },
-            { x: 208, y: 58, text: '+', step: 1 },
-        ],
-        lonePairs: [
-            { x: 130, y: 38, label: ':O', step: 0 },
-            { x: 286, y: 58, label: ':B', step: 2 },
-        ],
-        electronMovement: [
-            { path: 'M 128 40 C 136 22, 150 12, 164 22', label: ':O -> H+', step: 0, bend: 1.3 },
-            { path: 'M 286 58 C 260 18, 236 8, 216 38', label: ':B -> beta-H', step: 2, bend: 1.45 },
-            { path: 'M 208 42 C 184 36, 162 42, 154 56', label: 'C-H -> C=C', step: 2, bend: 1.3 },
-        ],
+function loadCuratedAnimationOverrides() {
+    if (typeof window !== 'undefined' && window.OrganicMapMechanismDefinitions && typeof window.OrganicMapMechanismDefinitions === 'object') {
+        return window.OrganicMapMechanismDefinitions;
     }
-};
 
+    if (typeof module !== 'undefined' && module.exports) {
+        try {
+            const definitions = require('./mechanism-definitions');
+            if (definitions && typeof definitions === 'object') {
+                return definitions;
+            }
+        } catch (error) {
+            // Ignore missing generated module and continue to JSON fallback.
+        }
+
+        try {
+            const definitions = require('../../mechanisms/definitions/curated-overrides.json');
+            if (definitions && typeof definitions === 'object') {
+                return definitions;
+            }
+        } catch (error) {
+            // Ignore JSON fallback errors so runtime can still use template defaults.
+        }
+    }
+
+    return {};
+}
+
+const curatedAnimationOverrides = loadCuratedAnimationOverrides();
 function isNonEmptyString(value) {
     return typeof value === 'string' && value.trim().length > 0;
 }

@@ -15,8 +15,11 @@ with standalone organic map assets under `public/`. The roadmap lives in
 ```
 public/
   organic-map.html     # Standalone organic map entry page
+  mechanism-preview.html # Standalone curated mechanism inspection page
   js/                  # Standalone map runtime/data scripts
   css/                 # Standalone map styles
+mechanisms/
+  definitions/         # Curated mechanism source JSON (single source of truth)
 src/
   app/                 # App shell + router
   api/                 # API client placeholders (M0)
@@ -41,6 +44,9 @@ Then open:
 - `http://localhost:5173/student` for the student join flow.
 - `http://localhost:5173/map` for the integrated reaction map route.
 - `http://localhost:5173/teacher` for the teacher login flow.
+- `http://localhost:5173/mechanism-preview.html` for curated mechanism inspection with
+  map-equivalent canvas overlays, step scrubbing controls, and preview-specific fit/aspect/cue
+  isolation rendering.
 
 After a successful student join, the app shows the Student MVP dashboard with mock activities,
 local progress updates, a sync status bar, and quick actions to open/jump to the reaction map.
@@ -50,6 +56,22 @@ distribution, search, and CSV export.
 
 Standalone organic map assets remain available at `http://localhost:5173/organic-map.html`.
 The main app embeds this map directly at `/map`.
+
+Curated mechanism definitions are sourced from
+`mechanisms/definitions/curated-overrides.json`.
+After editing that file, run:
+
+```sh
+node scripts/sync-mechanism-definitions.mjs
+```
+
+This regenerates:
+- `src/js/mechanism-definitions.js`
+- `public/js/mechanism-definitions.js`
+
+Mechanism canvas rendering is shared between map runtime and preview via:
+- `src/js/mechanism-canvas-renderer.js`
+- `public/js/mechanism-canvas-renderer.js`
 
 Run the full local verification checks (including build + edge tests) before pushing:
 
@@ -71,6 +93,7 @@ node tests/paths.test.js
 node tests/structure.test.js
 node tests/visual-smoke.test.js
 node tests/m2-animation-standard.test.js
+node tests/m2-mechanism-library.test.js
 node tests/m2-animation-visuals.test.js
 bash scripts/test-edge.sh
 ```

@@ -245,3 +245,95 @@ For scope and acceptance criteria, use the canonical roadmap in
 ### How to verify
 - Run `node --test tests/edge-test-script.test.js`.
 - Run `bash scripts/test-edge.sh` and confirm integration tests complete successfully.
+
+## M2 curated coverage expansion — substitution, elimination, and redox sets
+
+### What changed
+- Added new curated mechanism overrides in the shared animation registry for:
+  - `halo-to-amine-nuc-sub`,
+  - `halo-to-nitrile-nuc-sub`,
+  - `haloalkane-elimination`,
+  - `primary-alcohol-oxidation`,
+  - `ketone-reduction`.
+- Each new entry now includes Tier-B visual metadata:
+  - atom and bond scaffolds,
+  - dipole cues where bond polarity drives mechanism choice,
+  - lone-pair donor cues,
+  - curved electron-movement arrows with explicit step labels.
+- Expanded visual regression checks in `tests/m2-animation-visuals.test.js`:
+  - curated registry coverage now includes the five new mechanisms,
+  - mechanism-specific cue assertions enforce key lone-pair and arrow labels.
+
+### Why
+- Continues M2 beyond the initial three curated demos so more high-frequency mechanisms render as
+  chemically grounded stepwise animations instead of template-only fallback motion.
+
+### How to verify
+- Run `node tests/m2-animation-visuals.test.js`.
+- Run `node tests/m2-animation-player.test.js`.
+- Run `node tests/m2-animation-standard.test.js`.
+- Run `node tests/structure.test.js`.
+
+## M2 mechanism library extraction — inspectable source folder + preview page
+
+### What changed
+- Moved curated mechanism overrides out of inline `animations.js` into:
+  - `mechanisms/definitions/curated-overrides.json` (new source of truth).
+- Added generator script:
+  - `scripts/sync-mechanism-definitions.mjs`.
+  - Generates synchronized runtime modules:
+    - `src/js/mechanism-definitions.js`
+    - `public/js/mechanism-definitions.js`
+- Added shared mechanism canvas renderer module:
+  - `src/js/mechanism-canvas-renderer.js`
+  - `public/js/mechanism-canvas-renderer.js`
+- Refactored map animation registry modules (`src/js/animations.js`, `public/js/animations.js`) to load curated
+  definitions from the generated mechanism module (with JSON fallback in Node test environments).
+- Refactored map runtime canvas draw path to use `window.OrganicMapCanvasRenderer.drawMechanismCanvasFrame(...)`
+  so map playback and preview playback share rendering logic.
+- Added standalone mechanism inspection page:
+  - `public/mechanism-preview.html`
+  - Includes mechanism selector, step list, cue counts, raw JSON panel, and shared-renderer
+    canvas mechanism rendering (atoms, bonds, dipoles, lone pairs, electron arrows).
+  - Preview playback now enables shared-renderer `fitToContent`, `preserveAspect`, and
+    `strictStepCues` modes so mechanism geometry is scaled/centered and step-specific overlays
+    do not leak into later frames, without changing map runtime rendering behavior.
+  - Added play/pause, reset, duration selection, and progress scrubbing controls for targeted
+    step-by-step visual inspection before map integration testing.
+- Updated `public/organic-map.html` script order so mechanism definitions load before animation registry wiring.
+
+### Why
+- Creates a dedicated, inspectable mechanism library so animation content can be reviewed and iterated
+  independently before validating full map interaction behavior.
+
+### How to verify
+- Run `node tests/m2-mechanism-library.test.js`.
+- Run `node tests/m2-animation-visuals.test.js`.
+- Open `/mechanism-preview.html` and inspect multiple mechanism entries.
+
+## M2 preview fidelity pass — stable scene fit and de-stretched framing
+
+### What changed
+- Upgraded preview canvas sizing in `public/mechanism-preview.html` from `h-44` to responsive `h-56 / md:h-64`
+  so mechanism frames have more vertical room and avoid compressed visual scale.
+- Added a definition-level fit envelope cache in the preview scene renderer:
+  - fit bounds now stay stable across steps for the same mechanism (less zoom jitter and no sudden shrink).
+- Updated preview fit math to use top/bottom insets and explicit min/max scale clamps.
+- Updated shared renderer geometry fitting in:
+  - `src/js/mechanism-canvas-renderer.js`
+  - `public/js/mechanism-canvas-renderer.js`
+  so `collectMechanismPoints(...)` samples real Bezier curve points for electron arrows instead of
+  raw control points that can exaggerate bounds.
+- Exposed reusable renderer fit helpers (`sampleCurvePoints`, `collectMechanismPoints`,
+  `buildContentFitTransform`) for regression testing.
+- Expanded `tests/m2-animation-visuals.test.js` with renderer-fit assertions for sampled curve bounds
+  and bounded scale transforms.
+
+### Why
+- Fixes the broken preview behavior reported during dehydration/elimination inspection where mechanisms
+  appeared tiny or visually stretched due to over-inflated fit bounds.
+
+### How to verify
+- Run `node tests/m2-animation-visuals.test.js`.
+- Open `/mechanism-preview.html`, select `alcohol-dehydration`, move progress to step 3, and confirm
+  the scene remains stable and legible without stretch artifacts.
